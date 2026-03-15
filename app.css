@@ -1,0 +1,8 @@
+body { font-family: system-ui; background: #121212; color: #fff; }
+.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+.section { margin: 2rem 0; }
+.hero { padding: 1rem; border: 1px solid #444; border-radius: 8px; margin: 0.5rem 0; }
+.strategy { padding: 1rem; border: 1px solid #666; border-radius: 8px; margin: 0.7rem 0; }
+.form-box input, textarea { width: 100%; padding: 0.6rem; margin: 0.4rem 0; background: #222; color:#fff; border:1px solid #555; border-radius:6px; }
+button { padding:0.7rem 1.2rem; background:#c44569; color:white; border:none; border-radius:6px; cursor:pointer; }
+.vote-btn { background:#333; padding:0.3rem 0.6rem; margin-left:0.4rem; font-size:12px; }

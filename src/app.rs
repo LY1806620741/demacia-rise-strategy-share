@@ -139,46 +139,76 @@ pub fn App() -> impl IntoView {
                             view! { <div class="error-box">"出错了"</div> }.into_view()
                         } else {
                             match active_tab.get().as_ref() {
-                                "home" => view! {
-                                    <div class="dashboard">
-                                        <h2>"战术板"</h2>
-                                        <div class="strategy-list">
-                                            {move || {
-                                                display_items.get().into_iter().map(|item| {
-                                                    let id = match &item.source {
-                                                        DataSource::Strategy(s) => Some(s.id.clone()),
-                                                        _ => None,
-                                                    };
-                                                    view! {
-                                                        <div class="card">
-                                                            <h3>{item.title()}</h3>
-                                                            {match &item.source {
-                                                                DataSource::Strategy(s) => view! { <p>{s.description.clone()}</p> }.into_view(),
-                                                                DataSource::Hero(h) => view! { <p>{format!("HP:{} ATK:{}", h.hp, h.attack)}</p> }.into_view(),
-                                                                DataSource::Building(b) => view! { <p>{format!("Cost:{} Gold", b.cost_gold)}</p> }.into_view(),
-                                                            }}
-                                                            {
-                                                                let sid = id.unwrap_or_default();
-                                                                view! {
-                                                                    <div class="actions">
-                                                                        <button onclick=move || handle_like(sid.clone(), true)>"👍"</button>
-                                                                        <button onclick=move || handle_like(sid.clone(), false)>"👎"</button>
-                                                                    </div>
-                                                                }.into_view()
-                                                            }
-                                                        </div>
-                                                    }
-                                                }).collect_view()
-                                            }}
+    "home" => {
+        view! {
+            <div class="dashboard">
+                <h2>"战术板"</h2>
+                <div class="strategy-list">
+                    {display_items.get().into_iter().map(|item| {
+                        let id = match &item.source {
+                            DataSource::Strategy(s) => Some(s.id.clone()),
+                            _ => None,
+                        };
+                        view! {
+                            <div class="card">
+                                <h3>{item.title()}</h3>
+                                {match &item.source {
+                                    DataSource::Strategy(s) => view! { <p>{s.description.clone()}</p> }.into_view(),
+                                    DataSource::Hero(h) => view! { <p>{format!("HP:{} ATK:{}", h.hp, h.attack)}</p> }.into_view(),
+                                    DataSource::Building(b) => view! { <p>{format!("Cost:{} Gold", b.cost_gold)}</p> }.into_view(),
+                                }}
+                                {
+                                    let sid = id.unwrap_or_default();
+                                    view! {
+                                        <div class="actions">
+                                            <button onclick=move || handle_like(sid.clone(), true)>"👍"</button>
+                                            <button onclick=move || handle_like(sid.clone(), false)>"👎"</button>
                                         </div>
-                                        <NewStrategyForm on_submit=handle_create_strategy/>
-                                    </div>
-                                }.into_view(),
-                                _ => view! {
-        <div class="dashboard">
-            <h2>"未知页面"</h2>
-        </div>
-    }.into_view()
+                                    }.into_view()
+                                }
+                            </div>
+                        }
+                    }).collect_view()}
+                </div>
+                <NewStrategyForm on_submit=handle_create_strategy/>
+            </div>
+        }.into_view()
+    },
+    _ => {
+        view! {
+            <div class="dashboard">
+                <h2>"未知页面"</h2>
+                <div class="strategy-list">
+                    {display_items.get().into_iter().map(|item| {
+                        let id = match &item.source {
+                            DataSource::Strategy(s) => Some(s.id.clone()),
+                            _ => None,
+                        };
+                        view! {
+                            <div class="card">
+                                <h3>{item.title()}</h3>
+                                {match &item.source {
+                                    DataSource::Strategy(s) => view! { <p>{s.description.clone()}</p> }.into_view(),
+                                    DataSource::Hero(h) => view! { <p>{format!("HP:{} ATK:{}", h.hp, h.attack)}</p> }.into_view(),
+                                    DataSource::Building(b) => view! { <p>{format!("Cost:{} Gold", b.cost_gold)}</p> }.into_view(),
+                                }}
+                                {
+                                    let sid = id.unwrap_or_default();
+                                    view! {
+                                        <div class="actions">
+                                            <button onclick=move || handle_like(sid.clone(), true)>"👍"</button>
+                                            <button onclick=move || handle_like(sid.clone(), false)>"👎"</button>
+                                        </div>
+                                    }.into_view()
+                                }
+                            </div>
+                        }
+                    }).collect_view()}
+                </div>
+                <NewStrategyForm on_submit=handle_create_strategy/>
+            </div>
+        }.into_view()
+    }
                             }
                         }
                     }}

@@ -1,85 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta charset="UTF-8">
     <title>德玛西亚的崛起 - 策略模拟器</title>
-    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z"/>
-    <style>
-        :root {
-            --demacia-blue: #004477;
-            --demacia-gold: #C5A059;
-            --bg-color: #f4f4f9;
-            --card-bg: #ffffff;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-        .demacia-theme header {
-            background: linear-gradient(135deg, var(--demacia-blue), #002244);
-            color: white;
-            padding: 2rem;
-            text-align: center;
-            border-bottom: 4px solid var(--demacia-gold);
-        }
-        .demacia-theme h1 { margin: 0; font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        nav { margin-top: 1rem; }
-        nav button {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid var(--demacia-gold);
-            color: white;
-            padding: 0.5rem 1rem;
-            margin: 0 0.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s;
-        }
-        nav button:hover { background: var(--demacia-gold); color: var(--demacia-blue); }
-        
-        main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-        
-        .card {
-            background: var(--card-bg);
-            border-left: 5px solid var(--demacia-blue);
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .card:hover { transform: translateY(-2px); }
-        .card h3 { color: var(--demacia-blue); margin-top: 0; }
-        
-        .actions { margin-top: 1rem; display: flex; gap: 10px; align-items: center; }
-        .actions button {
-            background: #eee; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px;
-        }
-        .actions button:hover { background: #ddd; }
-        .score { font-weight: bold; color: var(--demacia-gold); margin-left: auto; }
-
-        .form-box {
-            background: white; padding: 1.5rem; border-radius: 8px;
-            border: 2px dashed var(--demacia-blue); margin-top: 2rem;
-        }
-        .form-box input, .form-box textarea {
-            width: 100%; margin-bottom: 1rem; padding: 0.8rem;
-            border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
-        }
-        .form-box button {
-            background: var(--demacia-blue); color: white; border: none;
-            padding: 0.8rem 1.5rem; font-size: 1rem; cursor: pointer; border-radius: 4px;
-        }
-        .form-box button:hover { background: #003355; }
-        
-        .sim-placeholder {
-            background: #eef; padding: 3rem; text-align: center; color: #668;
-            border-radius: 8px; border: 1px solid #ccd;
-        }
-    </style>
+    <link rel="stylesheet" href="app.css">
 </head>
-<body></body>
+<body>
+    <div class="container">
+        <h1>🛡️ 德玛西亚的崛起 · 策略模拟器</h1>
+        <p class="sub">官方基准 + 社区野生策略 + 点赞共识</p>
+
+        <div class="section">
+            <h2>官方英雄数据</h2>
+            <div id="hero-list"></div>
+        </div>
+
+        <div class="section">
+            <h2>野生策略库</h2>
+            <div id="strategy-list"></div>
+        </div>
+
+        <div class="section form-box">
+            <h3>发布你的战术</h3>
+            <input id="title" placeholder="策略标题">
+            <textarea id="desc" placeholder="战术描述"></textarea>
+            <button onclick="submitStrategy()">发布到德玛西亚网络</button>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
 </html>
