@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use wasm_bindgen::prelude::*;
 
 // --- 官方数据 (来自 GitHub) ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

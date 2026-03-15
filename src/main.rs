@@ -1,15 +1,8 @@
-mod app;
-mod data_model;
-mod storage;
-mod github_sync;
-
-use leptos::*;
+use leptos::mount::mount_to_body;
+use League_of_Legends_demacia_rise_sim::App;
 
 fn main() {
     console_log::init_with_level(log::Level::Debug).expect("Initialize logger");
-    mount_to_body(|| {
-        view! {
-            <App />
-        }
-    });
+    console_error_panic_hook::set_once();
+    mount_to_body(App);
 }
