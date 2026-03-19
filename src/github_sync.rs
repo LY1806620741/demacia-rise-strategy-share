@@ -3,7 +3,7 @@ use reqwest_wasm::Client;
 use serde_json;
 
 // 替换为你的 GitHub Raw URL
-const OFFICIAL_DATA_URL: &str = "https://raw.githubusercontent.com/your-username/demacia-rise/main/data/official_data.json";
+const OFFICIAL_DATA_URL: &str = "https://raw.githubusercontent.com/LY1806620741/demacia-rise-strategy-share/main/data/official_data.json";
 
 pub async fn fetch_official_data() -> Result<OfficialDataSet, String> {
     let client = Client::new();

@@ -197,33 +197,60 @@ function populateFormSelects() {
 
     // 填充敌人选择
     const targetSelect = document.getElementById('target');
-    targetSelect.innerHTML = '<option value="">选择目标敌人...</option>';
-    config.enemy_units.forEach(unit => {
+    targetSelect.innerHTML = '<option value="">选择目标敌人阵容...</option>';
+    config.enemy_compositions.forEach(comp => {
         const opt = document.createElement('option');
-        opt.value = unit.id;
-        opt.textContent = `${unit.name}（${unit.threat_level}）`;
+        opt.value = comp.id;
+        opt.textContent = `${comp.name}（${comp.threat_level}）`;
         targetSelect.appendChild(opt);
     });
 
-    // 填充查询敌人选择
+    // 填充查询敌人阵容选择
     const searchByEnemySelect = document.getElementById('search-by-enemy');
-    searchByEnemySelect.innerHTML = '<option value="">选择敌人，查询最佳应对方案...</option>';
-    config.enemy_units.forEach(unit => {
+    searchByEnemySelect.innerHTML = '<option value="">选择敌人阵容，查询最佳防守方案...</option>';
+    config.enemy_compositions.forEach(comp => {
         const opt = document.createElement('option');
-        opt.value = unit.id;
-        opt.textContent = `${unit.name}（${unit.threat_level}）`;
+        opt.value = comp.id;
+        opt.textContent = `${comp.name}（威胁度: ${comp.threat_level}）`;
         searchByEnemySelect.appendChild(opt);
     });
 
-    // 填充阵容多选
+    // 填充阵容多选（从所有单位中选择）
     const lineupSelect = document.getElementById('lineup-select');
     lineupSelect.innerHTML = '';
-    config.demacia_units.forEach(unit => {
+    
+    // 添加分组: 德玛西亚
+    const demaciaGroup = document.createElement('optgroup');
+    demaciaGroup.label = '德玛西亚';
+    config.units.demacia.forEach(unit => {
         const opt = document.createElement('option');
         opt.value = unit.id;
         opt.textContent = `${unit.name} (${unit.type})`;
-        lineupSelect.appendChild(opt);
+        demaciaGroup.appendChild(opt);
     });
+    lineupSelect.appendChild(demaciaGroup);
+    
+    // 添加分组: 诺克萨斯
+    const noxusGroup = document.createElement('optgroup');
+    noxusGroup.label = '诺克萨斯';
+    config.units.noxus.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit.id;
+        opt.textContent = `${unit.name} (${unit.type})`;
+        noxusGroup.appendChild(opt);
+    });
+    lineupSelect.appendChild(noxusGroup);
+    
+    // 添加分组: 其他
+    const otherGroup = document.createElement('optgroup');
+    otherGroup.label = '其他单位';
+    config.units.other.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit.id;
+        opt.textContent = `${unit.name} (${unit.type})`;
+        otherGroup.appendChild(opt);
+    });
+    lineupSelect.appendChild(otherGroup);
 
     // 填充科技树复选
     const techTree = document.getElementById('tech-tree');
@@ -233,17 +260,23 @@ function populateFormSelects() {
         chapterDiv.className = 'tech-chapter';
         const title = document.createElement('h4');
         title.textContent = `第 ${chapter.chapter} 章：${chapter.name}`;
+        const desc = document.createElement('p');
+        desc.style.fontSize = '0.85rem';
+        desc.style.color = '#999';
+        desc.textContent = chapter.description;
         chapterDiv.appendChild(title);
+        chapterDiv.appendChild(desc);
 
         chapter.techs.forEach(tech => {
             const label = document.createElement('label');
             label.className = 'tech-checkbox';
+            label.title = `${tech.effect} - ${tech.description}`;
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = tech.id;
             checkbox.title = tech.description;
             label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(` ${tech.name}`));
+            label.appendChild(document.createTextNode(` ${tech.name} (${tech.effect})`));
             chapterDiv.appendChild(label);
         });
 
@@ -439,46 +472,122 @@ window.autoDetectUnits = function () {
     alert(`✅ 已自动识别 ${detectedUnits.length} 个兵种: ${detectedUnits.map(u => u.name).join(', ')}`);
 };
 async function searchByEnemy() {
-    const enemyId = document.getElementById('search-by-enemy').value;
-    if (!enemyId) {
+    const compositionId = document.getElementById('search-by-enemy').value;
+    if (!compositionId) {
         document.getElementById('search-results-container').innerHTML = '';
         return;
     }
 
-    const lineups = await getLineupsByEnemy(enemyId);
-    const container = document.getElementById('search-results-container');
-
-    if (!lineups || lineups.length === 0) {
-        container.innerHTML = '<div class="muted">暂无推荐方案</div>';
+    const enemyComposition = config.enemy_compositions.find(c => c.id === compositionId);
+    if (!enemyComposition) {
+        document.getElementById('search-results-container').innerHTML = '<div class="muted">敌人阵容不存在</div>';
         return;
     }
 
-    // 按赞数排序
-    lineups.sort((a, b) => (b.likes - b.dislikes) - (a.likes - a.dislikes));
+    const container = document.getElementById('search-results-container');
+    
+    // 显示敌人阵容信息
+    let enemyHtml = `
+        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #d32f2f;">
+            <h3>${enemyComposition.name} (威胁度: ${enemyComposition.threat_level})</h3>
+            <p style="color: #ccc; margin-top: 0.5rem;">${enemyComposition.description}</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-top: 0.8rem;">
+    `;
+    
+    // 显示敌人阵容中的主要单位
+    const uniqueUnits = [...new Set(enemyComposition.units)];
+    uniqueUnits.forEach(unitId => {
+        let unitName = unitId;
+        // 从各个单位列表中找
+        const allUnits = [...config.units.demacia, ...config.units.noxus, ...config.units.other];
+        const unit = allUnits.find(u => u.id === unitId);
+        if (unit) unitName = unit.name;
+        enemyHtml += `<span style="background: #1a1a1a; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.9rem;">⚔️ ${unitName}</span>`;
+    });
+    
+    enemyHtml += `</div></div>`;
+    
+    // 从 IndexedDB 获取对应的策略
+    const strategiesFromDB = await loadStrategiesFromDB();
+    
+    // 根据敌人阵容中包含的单位来搜索对应的防守方案
+    const relevantStrategies = strategiesFromDB.filter(strat => {
+        // 检查策略是否提到敌人阵容中的单位
+        const stratText = (strat.counter_lineup + strat.counter_tech).toLowerCase();
+        const enemyUnitNames = uniqueUnits.map(id => {
+            const allUnits = [...config.units.demacia, ...config.units.noxus, ...config.units.other];
+            const unit = allUnits.find(u => u.id === id);
+            return unit ? unit.name.toLowerCase() : id.toLowerCase();
+        });
+        
+        return enemyUnitNames.some(name => stratText.includes(name));
+    });
+    
+    // 如果没有直接匹配，返回所有策略（让P2P聚合搜索）
+    const strategies = relevantStrategies.length > 0 ? relevantStrategies : strategiesFromDB;
+    
+    if (!strategies || strategies.length === 0) {
+        container.innerHTML = enemyHtml + '<div class="muted">暂无推荐方案，欢迎用户创建！</div>';
+        return;
+    }
 
-    const html = lineups.map(lineup => {
-        const unitNames = lineup.units.map(unitId => {
-            const unit = config.demacia_units.find(u => u.id === unitId);
-            return unit ? unit.name : unitId;
-        }).join(' + ');
+    // 添加投票权重，并排序
+    const strategies_with_votes = strategies.map(s => {
+        const votes = localVotes.get(s.id) || { likes: new Map(), dislikes: new Map() };
+        return {
+            ...s,
+            vote_count: votes.likes.size - votes.dislikes.size,
+            likes: votes.likes.size,
+            dislikes: votes.dislikes.size
+        };
+    });
 
+    strategies_with_votes.sort((a, b) => {
+        // 优先按投票差值排序
+        const voteDiff = (b.likes - b.dislikes) - (a.likes - a.dislikes);
+        if (voteDiff !== 0) return voteDiff;
+        // 其次按策略评分排序
+        return b.score - a.score;
+    });
+
+    const strategyHtml = strategies_with_votes.map((strat, idx) => {
+        const votes = localVotes.get(strat.id) || { likes: new Map(), dislikes: new Map() };
+        
+        // 查找该策略涉及的科技
+        const stratTechs = strat.counter_tech.split(',')
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
+        
+        const techDetails = stratTechs.map(techName => {
+            // 从config中查找科技详情
+            for (const chapter of config.tech_tree) {
+                const tech = chapter.techs.find(t => t.name.toLowerCase().includes(techName.toLowerCase()) || t.id === techName);
+                if (tech) {
+                    return `<li><strong>${tech.name}</strong>: ${tech.effect} - ${tech.description}</li>`;
+                }
+            }
+            return `<li>${techName}</li>`;
+        }).join('');
+        
         return `
-            <div class="card recommendation-card">
-                <h4>${lineup.name}</h4>
+            <div class="card recommendation-card" style="margin-top: 1rem;">
+                <h4>#${idx + 1} - ${strat.title}</h4>
                 <div class="meta">
-                    <span>👥 阵容：<strong>${unitNames}</strong></span>
+                    <span>🎯 目标平台</span>
+                    <span>👥 阵容: <strong>${strat.counter_lineup}</strong></span>
                 </div>
-                <p>${lineup.description}</p>
+                <p>${strat.description}</p>
+                ${techDetails ? `<div style="background: #1a2a3a; padding: 0.8rem; border-radius: 6px; margin: 0.8rem 0;"><strong style="color: #4dabf7;">推荐科技:</strong><ul style="margin: 0.5rem 0; padding-left: 1.2rem;">${techDetails}</ul></div>` : ''}
                 <div class="vote">
-                    <span>👍 ${lineup.likes}</span>
-                    <span>👎 ${lineup.dislikes}</span>
-                    <span>评分: ${((lineup.likes - lineup.dislikes) / Math.max(1, lineup.likes + lineup.dislikes)).toFixed(2)}</span>
+                    <button class="vote-btn" onclick="voteOnStrategy('${strat.id}', true)">👍 ${votes.likes.size || strat.likes}</button>
+                    <button class="vote-btn" onclick="voteOnStrategy('${strat.id}', false)">👎 ${votes.dislikes.size || strat.dislikes}</button>
+                    <span class="hit-score">综合评分: ${(strat.score + votes.likes.size * 2 - votes.dislikes.size * 1).toFixed(1)}</span>
                 </div>
             </div>
         `;
     }).join('');
 
-    container.innerHTML = html;
+    container.innerHTML = enemyHtml + strategyHtml;
 }
 function renderStrategies() {
     const list = get_strategies();
