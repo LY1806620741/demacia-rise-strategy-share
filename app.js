@@ -41,6 +41,10 @@ async function initIndexedDB() {
                 const lineupStore = db.createObjectStore('lineups', { keyPath: 'id' });
                 lineupStore.createIndex('target', 'target', { unique: false });
             }
+            // 投票历史库：存储投票计数持久化
+            if (!db.objectStoreNames.contains('vote_history')) {
+                db.createObjectStore('vote_history', { keyPath: 'strategyId' });
+            }
         };
     });
 }
@@ -333,6 +337,29 @@ async function start() {
     // 初始化官方推荐阵容
     await initOfficialLineups();
 
+    // 从 IndexedDB 恢复持久化的策略和投票数据
+    try {
+        const savedStrategies = await loadStrategiesFromDB();
+        if (savedStrategies.length > 0) {
+            // 恢复策略到 WASM 内存
+            for (const strat of savedStrategies) {
+                create_strategy(
+                    strat.id,
+                    strat.title,
+                    strat.description,
+                    strat.target_hero,
+                    strat.counter_lineup,
+                    strat.counter_tech
+                );
+            }
+            console.log(`✅ 从 IndexedDB 恢复了 ${savedStrategies.length} 个策略`);
+        }
+        // 恢复投票数据
+        await loadVoteHistoryFromDB();
+    } catch (e) {
+        console.error('恢复 IndexedDB 数据失败', e);
+    }
+
     // P2P 元信息和心跳
     knownNodes.set(nodeId, nowMs());
     updateNodeHeartbeat();
@@ -617,26 +644,67 @@ function handleVoteEvent(msg) {
 async function updateVoteInDB(strategyId, votes) {
     if (!db) return;
     return new Promise((resolve) => {
-        const tx = db.transaction(['strategies'], 'readwrite');
-        const store = tx.objectStore('strategies');
-        const getReq = store.get(strategyId);
+        const tx = db.transaction(['strategies', 'vote_history'], 'readwrite');
+        
+        // 更新策略的投票计数
+        const stratStore = tx.objectStore('strategies');
+        const getReq = stratStore.get(strategyId);
         getReq.onsuccess = () => {
             const strategy = getReq.result;
             if (strategy) {
-                // 计算全局投票数（来自所有节点）
                 strategy.likes = votes.likes.size;
                 strategy.dislikes = votes.dislikes.size;
-                const updateReq = store.put(strategy);
-                updateReq.oncomplete = () => resolve();
-            } else {
-                resolve();
+                stratStore.put(strategy);
             }
+        };
+        
+        // 保存投票详情到 vote_history (用于恢复)
+        const voteStore = tx.objectStore('vote_history');
+        const votesDetail = {
+            strategyId,
+            likes: Array.from(votes.likes.entries()),    // 转换为可序列化格式
+            dislikes: Array.from(votes.dislikes.entries()),
+            timestamp: nowMs()
+        };
+        voteStore.put(votesDetail);
+        
+        tx.oncomplete = () => resolve();
+    });
+}
+
+// 从 IndexedDB 恢复保存的投票数据到内存
+async function loadVoteHistoryFromDB() {
+    if (!db) return;
+    return new Promise((resolve) => {
+        const tx = db.transaction('vote_history', 'readonly');
+        const store = tx.objectStore('vote_history');
+        const req = store.getAll();
+        req.onsuccess = () => {
+            const records = req.result;
+            records.forEach(record => {
+                if (!localVotes.has(record.strategyId)) {
+                    localVotes.set(record.strategyId, {
+                        likes: new Map(),
+                        dislikes: new Map()
+                    });
+                }
+                const votes = localVotes.get(record.strategyId);
+                // 恢复投票数据
+                record.likes.forEach(([nodeId, ts]) => votes.likes.set(nodeId, ts));
+                record.dislikes.forEach(([nodeId, ts]) => votes.dislikes.set(nodeId, ts));
+            });
+            console.log(`✅ 从 IndexedDB 恢复了 ${records.length} 个策略的投票数据`);
+            resolve();
+        };
+        req.onerror = () => {
+            console.error('加载投票历史失败');
+            resolve();
         };
     });
 }
 
 // 本地投票操作（用户点钢/点踩时调用）
-window.voteOnStrategy = function(strategyId, isLike) {
+window.voteOnStrategy = async function(strategyId, isLike) {
     broadcastVote(strategyId, isLike);
     // 立即更新本地卡片显示
     const strategy = get_strategies().find(s => s.id === strategyId);
@@ -647,6 +715,8 @@ window.voteOnStrategy = function(strategyId, isLike) {
             strategy.dislikes++;
         }
         renderStrategies();
+        // 同时保存到 IndexedDB 以持久化投票计数
+        await saveStrategyToDB(strategy);
     }
 };
 
