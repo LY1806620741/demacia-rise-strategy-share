@@ -46,8 +46,7 @@ jobs:
       - name: Prepare static publish folder
         run: |
           mkdir -p .gh-pages
-          cp -R index.html app.css app.js data config.json .gh-pages/ 2>/dev/null || true
-          cp -R pkg/* .gh-pages/
+          cp -R index.html app.css app.js data config.json pkg .gh-pages/ 2>/dev/null
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
