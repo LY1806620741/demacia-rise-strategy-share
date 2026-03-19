@@ -120,12 +120,34 @@ button {
     font-weight: bold;
 }
 
+button:hover {
+    opacity: 0.85;
+    transform: scale(1.02);
+    transition: all 0.2s;
+}
+
+.vote-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    background: #333;
+    color: #4dabf7;
+    border: 1px solid #4dabf7;
+    display: inline-block;
+    margin-right: 0.4rem;
+}
+
+.vote-btn:hover {
+    background: #4dabf7;
+    color: #111;
+}
+
 .vote {
     margin-top: 0.5rem;
     font-size: 0.9rem;
     color: #ccc;
     display: flex;
     gap: 1rem;
+    align-items: center;
 }
 
 .meta {
@@ -142,6 +164,15 @@ button {
 
 .strategy-card {
     border-left: 4px solid #c44569;
+}
+
+.recommendation-card {
+    border-left: 4px solid #4dabf7;
+    background: #1a3a3a;
+}
+
+.recommendation-card h4 {
+    color: #4dabf7;
 }
 
 /* —— 搜索 —— */
@@ -201,10 +232,28 @@ button {
     font-size: .95rem;
 }
 
+.hit .hit-meta {
+    font-size: 0.85rem;
+    color: #b4b4b4;
+    margin: 0.4rem 0;
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.hit .hit-vote {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+}
+
 .hit .hit-score {
     color: #888;
     font-size: .78rem;
-    margin-top: .3rem;
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .hit.hero {
