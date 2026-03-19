@@ -69,6 +69,33 @@ button {
     padding: .6rem 0;
 }
 
+.status-box {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 0.9rem;
+}
+
+.p2p-status > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.3rem 0;
+    font-size: 0.95rem;
+}
+
+.status-light {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid #666;
+}
+
+.status-light.online { background: #4caf50; }
+.status-light.offline { background: #d32f2f; }
+.status-light.warn { background: #ffb300; }
+
 .hit {
     background: #191919;
     border: 1px solid #2a2a2a;

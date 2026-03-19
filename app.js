@@ -8,11 +8,100 @@ import init, {
 } from './pkg/demacia_rise.js';
 
 let p2pNode;
+let nodeId = crypto.randomUUID();
+let knownNodes = new Map();
+const NODE_TTL = 10000;
+let nodeHeartBeatTimer = null;
+
+function nowMs() { return Date.now(); }
+
+function updateNodeHeartbeat() {
+    const key = 'p2p_nodes';
+    const raw = localStorage.getItem(key);
+    let map = {};
+    if (raw) {
+        try { map = JSON.parse(raw); } catch (e) { map = {}; }
+    }
+    map[nodeId] = nowMs();
+    localStorage.setItem(key, JSON.stringify(map));
+    mergeNodeMap(map);
+}
+
+function mergeNodeMap(map) {
+    const cutoff = nowMs() - NODE_TTL;
+    let changed = false;
+    for (const [id, ts] of Object.entries(map)) {
+        if (ts < cutoff) {
+            delete map[id];
+            changed = true;
+        } else {
+            knownNodes.set(id, ts);
+        }
+    }
+    for (const id of [...knownNodes.keys()]) {
+        if (!map[id]) {
+            knownNodes.delete(id);
+            changed = true;
+        }
+    }
+    if (changed) {
+        localStorage.setItem('p2p_nodes', JSON.stringify(Object.fromEntries(knownNodes)));
+    }
+    renderP2PStatus();
+}
+
+function getNodeCount() {
+    const cutoff = nowMs() - NODE_TTL;
+    for (const [id, ts] of knownNodes) {
+        if (ts < cutoff) knownNodes.delete(id);
+    }
+    return Math.max(1, knownNodes.size); // 含自身
+}
+
+function isNetworkConnected() {
+    return knownNodes.size > 1;
+}
+
+function renderP2PStatus() {
+    const nodeCount = getNodeCount();
+    const dataCount = Array.isArray(get_strategies()) ? get_strategies().length : 0;
+    document.getElementById('p2p-node-count').textContent = String(nodeCount);
+    document.getElementById('p2p-data-count').textContent = String(dataCount);
+
+    const stateEl = document.getElementById('p2p-network-state');
+    const light = document.getElementById('p2p-status-light');
+    if (!p2pNode) {
+        stateEl.textContent = '离线';
+        light.className = 'status-light offline';
+    } else if (isNetworkConnected()) {
+        stateEl.textContent = '已连接';
+        light.className = 'status-light online';
+    } else {
+        stateEl.textContent = '单机';
+        light.className = 'status-light warn';
+    }
+}
 
 async function start() {
     await init();
     p2pNode = create_p2p_node();
-    console.log("✅ WASM 初始化完成");
+    console.log('✅ WASM 初始化完成');
+
+    // P2P 元信息和心跳
+    knownNodes.set(nodeId, nowMs());
+    updateNodeHeartbeat();
+    nodeHeartBeatTimer = setInterval(updateNodeHeartbeat, 3000);
+
+    // 监听退出，清理节点
+    window.addEventListener('beforeunload', () => {
+        const raw = localStorage.getItem('p2p_nodes');
+        if (!raw) return;
+        try {
+            const map = JSON.parse(raw);
+            delete map[nodeId];
+            localStorage.setItem('p2p_nodes', JSON.stringify(map));
+        } catch (e) {}
+    });
 
     // 加载官方数据（内部会重建索引）
     await loadHeroData();
@@ -20,9 +109,15 @@ async function start() {
     // 绑定搜索框监听（防抖）
     bindSearchBox();
 
-    // 实时刷新策略
-    setInterval(renderStrategies, 1000);
+    // 实时刷新策略与状态
+    setInterval(() => {
+        renderStrategies();
+        renderP2PStatus();
+    }, 1000);
+
+    renderP2PStatus();
 }
+
 
 // 加载官方英雄数据
 async function loadHeroData() {
@@ -85,13 +180,20 @@ window.js_p2p_broadcast = function (json) {
     window.dispatchEvent(event);
 };
 
-// 监听 P2P 消息
-window.addEventListener("storage", (e) => {
-    if (e.key === "p2p_msg") {
+// 监听 P2P 消息与节点变动
+window.addEventListener('storage', (e) => {
+    if (e.key === 'p2p_msg' && e.newValue) {
         p2p_receive_json(e.newValue);
-        // 若有搜索词，收到新策略后立即刷新命中
-        const q = document.getElementById("q")?.value?.trim();
+        const q = document.getElementById('q')?.value?.trim();
         if (q) runSearch(q);
+    }
+    if (e.key === 'p2p_nodes' && e.newValue) {
+        try {
+            const map = JSON.parse(e.newValue);
+            mergeNodeMap(map);
+        } catch (err) {
+            console.warn('p2p_nodes cannot parse', err);
+        }
     }
 });
 // —— 搜索：输入监听 + 渲染命中 ——

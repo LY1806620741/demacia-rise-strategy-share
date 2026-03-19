@@ -21,7 +21,8 @@ impl P2PNode {
     }
 }
 
-#[wasm_bindgen(module = "/app.js")]
+#[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(js_name = js_p2p_broadcast)]
     pub fn js_p2p_broadcast(json: &str);
 }
