@@ -274,3 +274,67 @@ mark {
     padding: 0 .15em;
     border-radius: 2px;
 }
+
+/* —— 阵容拖放 —— */
+.selected-lineup {
+    min-height: 60px;
+    border: 2px dashed #444;
+    border-radius: 6px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    background: #1a1a1a;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lineup-unit {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: move;
+    font-size: 0.85rem;
+}
+
+.lineup-unit:hover {
+    background: #333;
+}
+
+.unit-icon {
+    background: #4dabf7;
+    color: #111;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.unit-name {
+    flex: 1;
+}
+
+.remove-unit {
+    background: #d32f2f;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-unit:hover {
+    background: #b71c1c;
+}

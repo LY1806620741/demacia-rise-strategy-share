@@ -16,6 +16,45 @@
     {"id": "twisted_fate", "name": "崔斯特", "type": "mage", "role": "other", "threat": "high"},
     {"id": "zed", "name": "瑞兹", "type": "assassin", "role": "other", "threat": "extreme"}
   ],
+  "map_nodes": {
+    "capital": [
+      {"id": "demacia_city", "name": "德玛西亚雄都", "description": "主城，初始据点。主要建筑为兵营和禁魔石磨坊。"},
+      {"id": "zeffira", "name": "泽菲拉", "description": "后期解锁的高级首都据点，其功能与雄都一致。"}
+    ],
+    "heartland": [
+      {"id": "vaskasia", "name": "瓦斯卡西亚"},
+      {"id": "brookhollow", "name": "布鲁克霍洛"},
+      {"id": "tylburne", "name": "泰尔本"},
+      {"id": "jandelle", "name": "詹德尔"}
+    ],
+    "mountain": [
+      {"id": "high_silvermere", "name": "密银城", "description": "龙禽骑兵的基地。采石场产出加成最高（5.0）。"},
+      {"id": "uwendale", "name": "厄文戴尔", "description": "拉克丝的家乡。采石场加成同为 5.0。"},
+      {"id": "pinara", "name": "平纳拉", "description": "常规山地采石场据点。"},
+      {"id": "evenmoor", "name": "永沼镇", "description": "特殊山地据点。除了采石场，还可建造独特建筑：面纱夫人祭坛（提供减伤）和杜朗的工作室（减少研究成本）。"}
+    ],
+    "border": [
+      {"id": "terbisia", "name": "特比西亚"},
+      {"id": "cloudfield", "name": "云野"},
+      {"id": "meltridge", "name": "熔岩脊"},
+      {"id": "fossbarrow", "name": "福斯拜罗"}
+    ]
+  },
+  "enemies": [
+    {"id": "drakehound", "name": "龙犬", "type": "melee", "category": "wild", "description": "近战型。攻击行为是向单个目标扑击。"},
+    {"id": "krug", "name": "石甲虫", "type": "melee", "category": "wild", "description": "近战型。防御力极高，显著减少受到的近战伤害，建议使用远程单位处理。"},
+    {"id": "tribal_warrior", "name": "部落战士", "type": "melee", "category": "wild", "description": "近战型。会优先攻击远程单位，建议布置足够的防守位保护后排。"},
+    {"id": "troll", "name": "巨魔", "type": "ranged", "category": "wild", "description": "远程型。向单个目标投掷斧头，造成高额单体伤害。"},
+    {"id": "yeti", "name": "雪人", "type": "ranged", "category": "wild", "description": "远程型。投掷巨石并造成范围伤害。"},
+    {"id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "近战型。基础兵种，对德玛西亚卫兵有额外加成。"},
+    {"id": "noxian_drakhound", "name": "诺克萨斯龙犬", "type": "melee", "category": "noxus", "description": "近战型。训练有素，能轻松躲避远程单位的箭矢。"},
+    {"id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "近战型。优先寻找弓箭手，且对布甲单位有攻击加成，但对巡林客的弩箭抗性较低。"},
+    {"id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "远程型。投掷范围火球，克制近战坦克，但自身极为脆弱。"},
+    {"id": "noxian_mauler", "name": "诺克萨斯重锤兵", "type": "melee", "category": "noxus", "description": "近战型。血量极厚，当血量降至 50% 以下时会进入狂暴状态，攻击速度大幅提升。"},
+    {"id": "cloud_drake", "name": "云端巨龙", "type": "melee", "category": "boss", "description": "特殊近战单位。每四次攻击会释放狂风，直接击杀轻甲单位（如卫兵和弓箭手）。"},
+    {"id": "yeti_boss", "name": "雪人首领", "type": "ranged", "category": "boss", "description": "在特定战役或探索点出现的强力单位。"},
+    {"id": "zeffira_final", "name": "泽菲拉最终战", "type": "mixed", "category": "boss", "description": "第二幕的终点，通常涉及大规模诺克萨斯军团的围攻。"}
+  ],
   "units": {
     "demacia": [
       {"id": "garen", "name": "盖伦", "type": "hero", "tier": 3},

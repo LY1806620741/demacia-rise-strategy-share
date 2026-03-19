@@ -195,17 +195,7 @@ async function loadConfig() {
 function populateFormSelects() {
     if (!config) return;
 
-    // 填充敌人选择
-    const targetSelect = document.getElementById('target');
-    targetSelect.innerHTML = '<option value="">选择目标敌人阵容...</option>';
-    config.enemy_compositions.forEach(comp => {
-        const opt = document.createElement('option');
-        opt.value = comp.id;
-        opt.textContent = `${comp.name}（${comp.threat_level}）`;
-        targetSelect.appendChild(opt);
-    });
-
-    // 填充查询敌人阵容选择
+    // 填充敌人选择（用于查询）
     const searchByEnemySelect = document.getElementById('search-by-enemy');
     searchByEnemySelect.innerHTML = '<option value="">选择敌人阵容，查询最佳防守方案...</option>';
     config.enemy_compositions.forEach(comp => {
@@ -215,9 +205,11 @@ function populateFormSelects() {
         searchByEnemySelect.appendChild(opt);
     });
 
-    // 填充阵容多选（从所有单位中选择）
+    // 填充阵容多选（从所有单位中选择，最多8个）
     const lineupSelect = document.getElementById('lineup-select');
     lineupSelect.innerHTML = '';
+    lineupSelect.multiple = true;
+    lineupSelect.size = 10; // 显示更多选项
     
     // 添加分组: 德玛西亚
     const demaciaGroup = document.createElement('optgroup');
@@ -252,14 +244,14 @@ function populateFormSelects() {
     });
     lineupSelect.appendChild(otherGroup);
 
-    // 填充科技树复选
+    // 填充科技树复选，按主城等级区分
     const techTree = document.getElementById('tech-tree');
     techTree.innerHTML = '';
     config.tech_tree.forEach(chapter => {
         const chapterDiv = document.createElement('div');
         chapterDiv.className = 'tech-chapter';
         const title = document.createElement('h4');
-        title.textContent = `第 ${chapter.chapter} 章：${chapter.name}`;
+        title.textContent = `主城等级 ${chapter.chapter}：${chapter.name}`;
         const desc = document.createElement('p');
         desc.style.fontSize = '0.85rem';
         desc.style.color = '#999';
@@ -282,6 +274,96 @@ function populateFormSelects() {
 
         techTree.appendChild(chapterDiv);
     });
+
+    // 初始化拖放功能
+    initDragAndDrop();
+}
+
+function initDragAndDrop() {
+    // 为阵容选择添加拖放功能
+    const lineupSelect = document.getElementById('lineup-select');
+    const selectedLineup = document.getElementById('selected-lineup');
+    
+    // 使选项可拖动
+    lineupSelect.addEventListener('dragstart', (e) => {
+        if (e.target.tagName === 'OPTION') {
+            e.dataTransfer.setData('text/plain', e.target.value);
+            e.dataTransfer.effectAllowed = 'copy';
+        }
+    });
+    
+    // 使selected-lineup可接收拖放
+    selectedLineup.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+    
+    selectedLineup.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const unitId = e.dataTransfer.getData('text/plain');
+        if (unitId && selectedLineup.children.length < 8) { // 最多8个
+            addUnitToLineup(unitId);
+        }
+    });
+    
+    // 双击添加
+    lineupSelect.addEventListener('dblclick', (e) => {
+        if (e.target.tagName === 'OPTION' && selectedLineup.children.length < 8) {
+            addUnitToLineup(e.target.value);
+        }
+    });
+}
+
+function addUnitToLineup(unitId) {
+    const selectedLineup = document.getElementById('selected-lineup');
+    
+    // 检查是否已存在
+    if (Array.from(selectedLineup.children).some(div => div.dataset.unitId === unitId)) {
+        return;
+    }
+    
+    // 找到单位信息
+    let unit = null;
+    for (const faction of ['demacia', 'noxus', 'other']) {
+        unit = config.units[faction].find(u => u.id === unitId);
+        if (unit) break;
+    }
+    if (!unit) return;
+    
+    // 创建单位div
+    const unitDiv = document.createElement('div');
+    unitDiv.className = 'lineup-unit';
+    unitDiv.dataset.unitId = unitId;
+    unitDiv.draggable = true;
+    unitDiv.innerHTML = `
+        <span class="unit-icon">${unit.name.charAt(0)}</span>
+        <span class="unit-name">${unit.name}</span>
+        <button class="remove-unit" onclick="removeUnitFromLineup('${unitId}')">×</button>
+    `;
+    
+    // 添加拖放事件
+    unitDiv.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', unitId);
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    
+    selectedLineup.appendChild(unitDiv);
+    updateLineupInput();
+}
+
+function removeUnitFromLineup(unitId) {
+    const selectedLineup = document.getElementById('selected-lineup');
+    const unitDiv = selectedLineup.querySelector(`[data-unit-id="${unitId}"]`);
+    if (unitDiv) {
+        unitDiv.remove();
+        updateLineupInput();
+    }
+}
+
+function updateLineupInput() {
+    const selectedLineup = document.getElementById('selected-lineup');
+    const unitIds = Array.from(selectedLineup.children).map(div => div.dataset.unitId);
+    document.getElementById('lineup').value = unitIds.join(',');
 }
 
 function updateNodeHeartbeat() {

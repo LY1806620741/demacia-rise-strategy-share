@@ -52,19 +52,20 @@
         <div class="section form-box">
             <h3>发布你的战术 📡</h3>
             <input id="title" placeholder="策略标题" />
-            <select id="target">
-                <option value="">选择目标敌人...</option>
-            </select>
             <textarea id="desc" placeholder="战术描述"></textarea>
             <button onclick="autoDetectUnits()" style="width: auto; margin: 0.4rem 0.2rem 0.4rem 0;">🤖 自动识别兵种</button>
             
             <div class="dual-select">
                 <div>
-                    <label>推荐阵容（德玛西亚）</label>
-                    <select id="lineup-select" multiple size="4"></select>
+                    <label>推荐阵容（拖拽或双击添加，最多8个）</label>
+                    <select id="lineup-select" multiple size="8"></select>
+                    <div id="selected-lineup" class="selected-lineup">
+                        <!-- 拖放的单位会显示在这里 -->
+                    </div>
+                    <input type="hidden" id="lineup" />
                 </div>
                 <div>
-                    <label>科技应对</label>
+                    <label>科技应对（按主城等级解锁）</label>
                     <div id="tech-tree"></div>
                 </div>
             </div>
