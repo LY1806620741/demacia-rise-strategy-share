@@ -12,8 +12,68 @@ let nodeId = crypto.randomUUID();
 let knownNodes = new Map();
 const NODE_TTL = 10000;
 let nodeHeartBeatTimer = null;
+let config = null;
 
 function nowMs() { return Date.now(); }
+
+async function loadConfig() {
+    try {
+        const res = await fetch('/config.json');
+        config = await res.json();
+        populateFormSelects();
+    } catch (e) {
+        console.error('加载配置文件失败', e);
+    }
+}
+
+function populateFormSelects() {
+    if (!config) return;
+
+    // 填充敌人选择
+    const targetSelect = document.getElementById('target');
+    targetSelect.innerHTML = '<option value="">选择目标敌人...</option>';
+    config.enemy_units.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit.id;
+        opt.textContent = `${unit.name}（${unit.threat_level}）`;
+        targetSelect.appendChild(opt);
+    });
+
+    // 填充阵容多选
+    const lineupSelect = document.getElementById('lineup-select');
+    lineupSelect.innerHTML = '';
+    config.demacia_units.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit.id;
+        opt.textContent = `${unit.name} (${unit.type})`;
+        lineupSelect.appendChild(opt);
+    });
+
+    // 填充科技树复选
+    const techTree = document.getElementById('tech-tree');
+    techTree.innerHTML = '';
+    config.tech_tree.forEach(chapter => {
+        const chapterDiv = document.createElement('div');
+        chapterDiv.className = 'tech-chapter';
+        const title = document.createElement('h4');
+        title.textContent = `第 ${chapter.chapter} 章：${chapter.name}`;
+        chapterDiv.appendChild(title);
+
+        chapter.techs.forEach(tech => {
+            const label = document.createElement('label');
+            label.className = 'tech-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = tech.id;
+            checkbox.title = tech.description;
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(` ${tech.name}`));
+            chapterDiv.appendChild(label);
+        });
+
+        techTree.appendChild(chapterDiv);
+    });
+}
 
 function updateNodeHeartbeat() {
     const key = 'p2p_nodes';
@@ -87,6 +147,9 @@ async function start() {
     p2pNode = create_p2p_node();
     console.log('✅ WASM 初始化完成');
 
+    // 加载配置
+    await loadConfig();
+
     // P2P 元信息和心跳
     knownNodes.set(nodeId, nowMs());
     updateNodeHeartbeat();
@@ -147,8 +210,15 @@ function renderStrategies() {
 
     list.forEach(s => {
         el.innerHTML += `
-       <div class="card" data-id="${s.id}">
+       <div class="card strategy-card" data-id="${s.id}">
          <h4>${s.title}</h4>
+         <div class="meta">
+           <span>🎯 敌手：<strong>${s.target_hero}</strong></span>
+           <span>👥 阵容：<strong>${s.counter_lineup}</strong></span>
+         </div>
+         <div class="meta">
+           <span>🔧 科技：<strong>${s.counter_tech}</strong></span>
+         </div>
          <p>${s.description}</p>
          <div class="vote">
            <span>👍 ${s.likes}</span>
@@ -161,15 +231,35 @@ function renderStrategies() {
 
 // 提交战术（P2P 广播）
 window.submitStrategy = function () {
-    const title = document.getElementById("title").value;
-    const desc = document.getElementById("desc").value;
-    if (!title || !desc) return;
+    const title = document.getElementById('title').value.trim();
+    const desc = document.getElementById('desc').value.trim();
+    const target = document.getElementById('target').value.trim();
+
+    // 获取选中的阵容
+    const lineupSelect = document.getElementById('lineup-select');
+    const selectedLineups = Array.from(lineupSelect.selectedOptions).map(o => o.textContent).join(' + ');
+
+    // 获取选中的科技
+    const techCheckboxes = document.querySelectorAll('#tech-tree input[type="checkbox"]:checked');
+    const selectedTechs = Array.from(techCheckboxes).map(cb => {
+        const label = cb.parentElement;
+        return label.textContent.trim();
+    }).join(', ');
+
+    if (!title || !desc || !target || !selectedLineups || !selectedTechs) {
+        alert('请完整填写标题、描述、选择敌人、阵容和科技。');
+        return;
+    }
 
     const id = crypto.randomUUID();
-    create_strategy(id, title, desc, "garen");
+    create_strategy(id, title, desc, target, selectedLineups, selectedTechs);
 
-    document.getElementById("title").value = "";
-    document.getElementById("desc").value = "";
+    // 清表单
+    document.getElementById('title').value = '';
+    document.getElementById('desc').value = '';
+    document.getElementById('target').value = '';
+    lineupSelect.selectedIndex = -1;
+    techCheckboxes.forEach(cb => cb.checked = false);
 };
 
 // --- P2P 广播通道（多窗口同步）---

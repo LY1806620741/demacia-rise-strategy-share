@@ -1,0 +1,221 @@
+{
+  "demacia_units": [
+    {
+      "id": "garen",
+      "name": "盖伦",
+      "type": "fighter",
+      "cost": 1,
+      "hp": 620,
+      "attack": 66,
+      "description": "德玛西亚力量的象征"
+    },
+    {
+      "id": "lux",
+      "name": "拉克丝",
+      "type": "mage",
+      "cost": 2,
+      "hp": 520,
+      "attack": 58,
+      "description": "光照魔法师"
+    },
+    {
+      "id": "jarvan",
+      "name": "嘉文",
+      "type": "tank",
+      "cost": 2,
+      "hp": 750,
+      "attack": 52,
+      "description": "德玛西亚皇帝"
+    },
+    {
+      "id": "quinn",
+      "name": "奎因",
+      "type": "ranged",
+      "cost": 1,
+      "hp": 480,
+      "attack": 61,
+      "description": "德玛西亚侦察兵"
+    },
+    {
+      "id": "sylas",
+      "name": "塞拉斯",
+      "type": "fighter",
+      "cost": 3,
+      "hp": 580,
+      "attack": 72,
+      "description": "解放者"
+    },
+    {
+      "id": "poppy",
+      "name": "波比",
+      "type": "tank",
+      "cost": 1,
+      "hp": 680,
+      "attack": 48,
+      "description": "德玛西亚防线"
+    }
+  ],
+  "enemy_units": [
+    {
+      "id": "ahri",
+      "name": "阿狸",
+      "type": "mage",
+      "cost": 2,
+      "threat_level": "medium",
+      "description": "诡诈魔法"
+    },
+    {
+      "id": "darius",
+      "name": "达瑞斯",
+      "type": "fighter",
+      "cost": 3,
+      "threat_level": "high",
+      "description": "诺克萨斯之力"
+    },
+    {
+      "id": "leblanc",
+      "name": "勒布朗",
+      "type": "mage",
+      "cost": 3,
+      "threat_level": "high",
+      "description": "虚伪的魔法"
+    },
+    {
+      "id": "evelynn",
+      "name": "伊芙琳",
+      "type": "assassin",
+      "cost": 2,
+      "threat_level": "high",
+      "description": "痛苦显形"
+    },
+    {
+      "id": "teemo",
+      "name": "提莫",
+      "type": "ranged",
+      "cost": 1,
+      "threat_level": "low",
+      "description": "班德尔城军侦"
+    },
+    {
+      "id": "zed",
+      "name": "泽德",
+      "type": "assassin",
+      "cost": 3,
+      "threat_level": "high",
+      "description": "暗影忍者"
+    }
+  ],
+  "tech_tree": [
+    {
+      "chapter": 1,
+      "name": "初期防线",
+      "techs": [
+        {
+          "id": "armor_1",
+          "name": "基础护甲",
+          "description": "提升 20% 护甲",
+          "cost": 5,
+          "effect": "+20% armor"
+        },
+        {
+          "id": "hp_1",
+          "name": "强化体质",
+          "description": "提升 50 HP",
+          "cost": 5,
+          "effect": "+50 hp"
+        },
+        {
+          "id": "resist_1",
+          "name": "魔法抗性",
+          "description": "获得 15 魔法抗性",
+          "cost": 5,
+          "effect": "+15 magic resist"
+        }
+      ]
+    },
+    {
+      "chapter": 2,
+      "name": "中期进攻",
+      "techs": [
+        {
+          "id": "attack_1",
+          "name": "增强攻击",
+          "description": "提升 25% 攻击力",
+          "cost": 10,
+          "effect": "+25% attack"
+        },
+        {
+          "id": "crit_1",
+          "name": "致命一击",
+          "description": "获得 20% 暴击率",
+          "cost": 10,
+          "effect": "+20% crit"
+        },
+        {
+          "id": "armor_2",
+          "name": "强化护甲",
+          "description": "提升 40% 护甲",
+          "cost": 10,
+          "effect": "+40% armor"
+        }
+      ]
+    },
+    {
+      "chapter": 3,
+      "name": "后期统治",
+      "techs": [
+        {
+          "id": "burst_damage",
+          "name": "爆发伤害",
+          "description": "一次性增加 100% 伤害",
+          "cost": 20,
+          "effect": "+100% damage burst"
+        },
+        {
+          "id": "healing",
+          "name": "生命吸取",
+          "description": "伤害转化为生命",
+          "cost": 20,
+          "effect": "lifesteal"
+        },
+        {
+          "id": "invincible",
+          "name": "不灭堡垒",
+          "description": "获得 5 秒无敌",
+          "cost": 25,
+          "effect": "invincible"
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": "barracks",
+      "name": "兵营",
+      "description": "招募单位的中心",
+      "cost_gold": 100,
+      "cost_petricite": 0
+    },
+    {
+      "id": "academy",
+      "name": "军事学院",
+      "description": "提升科技升级速度",
+      "cost_gold": 150,
+      "cost_petricite": 50
+    },
+    {
+      "id": "watchtower",
+      "name": "瞭望塔",
+      "description": "早期预警系统",
+      "cost_gold": 80,
+      "cost_petricite": 0
+    },
+    {
+      "id": "forge",
+      "name": "锻造厂",
+      "description": "强化单位装备",
+      "cost_gold": 200,
+      "cost_petricite": 100
+    }
+  ]
+}

@@ -32,6 +32,9 @@ pub struct WildStrategy {
     pub title: String,
     pub description: String,
     pub target_hero: String,
+    // 新增字段：推荐阵容和科技应对（字符串，支持多行）
+    pub counter_lineup: String,
+    pub counter_tech: String,
     pub likes: i32,
     pub dislikes: i32,
     pub score: f32,

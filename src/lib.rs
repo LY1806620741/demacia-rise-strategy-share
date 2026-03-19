@@ -60,12 +60,21 @@ pub fn load_official_heroes() -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn create_strategy(id: &str, title: &str, desc: &str, target: &str) {
+pub fn create_strategy(
+    id: &str,
+    title: &str,
+    desc: &str,
+    target: &str,
+    lineup: &str,
+    tech: &str,
+) {
     let mut s = WildStrategy {
         id: id.into(),
         title: title.into(),
         description: desc.into(),
         target_hero: target.into(),
+        counter_lineup: lineup.into(),
+        counter_tech: tech.into(),
         likes: 0,
         dislikes: 0,
         score: 0.0,

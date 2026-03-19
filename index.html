@@ -42,8 +42,23 @@
 
         <div class="section form-box">
             <h3>发布你的战术 📡</h3>
-            <input id="title" placeholder="策略标题">
+            <input id="title" placeholder="策略标题" />
+            <select id="target">
+                <option value="">选择目标敌人...</option>
+            </select>
             <textarea id="desc" placeholder="战术描述"></textarea>
+            
+            <div class="dual-select">
+                <div>
+                    <label>推荐阵容（德玛西亚）</label>
+                    <select id="lineup-select" multiple size="4"></select>
+                </div>
+                <div>
+                    <label>科技应对</label>
+                    <div id="tech-tree"></div>
+                </div>
+            </div>
+
             <button onclick="submitStrategy()">发布到德玛西亚网络</button>
         </div>
     </div>

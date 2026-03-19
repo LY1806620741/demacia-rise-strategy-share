@@ -99,7 +99,15 @@ impl Inverted {
             });
         }
         for s in strategies {
-            let body = format!("{} {} {} {}", s.id, s.title, s.description, s.target_hero);
+            let body = format!(
+                "{} {} {} {} {} {}",
+                s.id,
+                s.title,
+                s.description,
+                s.target_hero,
+                s.counter_lineup,
+                s.counter_tech
+            );
             self.add_doc(Doc {
                 kind: DocKind::Strategy,
                 id: s.id.clone(),
@@ -115,7 +123,15 @@ impl Inverted {
         if self.meta.remove(&s.id).is_some() {
             // 从 postings & df 中移除旧项（为了简洁，此处不做“精准回收”，可在重建时清理）
         }
-        let body = format!("{} {} {} {}", s.id, s.title, s.description, s.target_hero);
+        let body = format!(
+            "{} {} {} {} {} {}",
+            s.id,
+            s.title,
+            s.description,
+            s.target_hero,
+            s.counter_lineup,
+            s.counter_tech
+        );
         self.add_doc(Doc {
             kind: DocKind::Strategy,
             id: s.id.clone(),
