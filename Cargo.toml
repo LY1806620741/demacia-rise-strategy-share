@@ -7,8 +7,30 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+once_cell = "1"
 wasm-bindgen = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.4"
-web-sys = { version = "0.3", features = ["console"] }
+serde_json = "1.0"
+web-sys = { version = "0.3", features = ["console", "Crypto"] }
 js-sys = "0.3"
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+wasm-bindgen-futures = "0.4.64"
+reqwest-wasm = "0.11.16"
+getrandom = { version = "0.2", features = ["js"] }
+
+libp2p = { version = "0.56", default-features = false, features = [
+    "kad",
+    "identify",
+    "request-response",
+    "macros",
+    "wasm-bindgen",
+    "webrtc-websys"
+] }
+libp2p-webrtc-websys = "0.4.0-alpha"
+
+[profile.wasm]
+inherits = "release"
+opt-level = "s"

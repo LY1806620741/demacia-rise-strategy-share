@@ -1,8 +1,119 @@
-body { font-family: system-ui; background: #121212; color: #fff; }
-.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
-.section { margin: 2rem 0; }
-.hero { padding: 1rem; border: 1px solid #444; border-radius: 8px; margin: 0.5rem 0; }
-.strategy { padding: 1rem; border: 1px solid #666; border-radius: 8px; margin: 0.7rem 0; }
-.form-box input, textarea { width: 100%; padding: 0.6rem; margin: 0.4rem 0; background: #222; color:#fff; border:1px solid #555; border-radius:6px; }
-button { padding:0.7rem 1.2rem; background:#c44569; color:white; border:none; border-radius:6px; cursor:pointer; }
-.vote-btn { background:#333; padding:0.3rem 0.6rem; margin-left:0.4rem; font-size:12px; }
+body {
+    background: #121212;
+    color: #fff;
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.sub {
+    color: #aaa;
+    margin-top: -10px;
+}
+
+.section {
+    margin: 2rem 0;
+}
+
+.card {
+    background: #1e1e1e;
+    padding: 1rem;
+    margin: 0.6rem 0;
+    border-radius: 10px;
+    border: 1px solid #333;
+}
+
+.form-box {
+    background: #1a1a1a;
+    padding: 1.2rem;
+    border-radius: 10px;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 0.7rem;
+    margin: 0.4rem 0;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 6px;
+}
+
+button {
+    padding: 0.8rem 1.4rem;
+    background: #c44569;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.vote {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #ccc;
+    display: flex;
+    gap: 1rem;
+}
+
+/* —— 搜索 —— */
+.search-results .muted {
+    color: #999;
+    padding: .6rem 0;
+}
+
+.hit {
+    background: #191919;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: .8rem;
+    margin: .6rem 0;
+}
+
+.hit .hit-type {
+    font-size: .75rem;
+    color: #bbb;
+    margin-bottom: .2rem;
+}
+
+.hit .hit-title {
+    font-weight: 700;
+    margin-bottom: .2rem;
+}
+
+.hit .hit-snippet {
+    color: #ccc;
+    font-size: .95rem;
+}
+
+.hit .hit-score {
+    color: #888;
+    font-size: .78rem;
+    margin-top: .3rem;
+}
+
+.hit.hero {
+    border-left: 3px solid #4dabf7;
+}
+
+.hit.building {
+    border-left: 3px solid #ffd43b;
+}
+
+.hit.strategy {
+    border-left: 3px solid #c44569;
+}
+
+mark {
+    background: #ffec99;
+    color: #111;
+    padding: 0 .15em;
+    border-radius: 2px;
+}
