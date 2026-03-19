@@ -184,7 +184,7 @@ async function queryDB(storeName, key) {
 
 async function loadConfig() {
     try {
-        const res = await fetch('/config.json');
+        const res = await fetch('./config.json');
         config = await res.json();
         populateFormSelects();
     } catch (e) {
