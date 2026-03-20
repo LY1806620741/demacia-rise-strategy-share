@@ -4,7 +4,8 @@ import init, {
     load_official_data,
     p2p_receive_json,
     create_p2p_node,
-    search,                  // ✅ 新增：WASM 本地全文检索
+    search,
+    recommend_strategies_for_enemy,  // 🆕 阵容相似度推荐
 } from './pkg/demacia_rise.js';
 
 let p2pNode;
@@ -417,7 +418,7 @@ function renderP2PStatus() {
     const nodeCount = getNodeCount();
     const dataCount = Array.isArray(get_strategies()) ? get_strategies().length : 0;
     document.getElementById('p2p-node-count').textContent = String(nodeCount);
-    document.getElementById('p2p-data-count').textContent = String(dataCount);
+    document.getElementById('community-strategy-count').textContent = String(dataCount);
 
     const stateEl = document.getElementById('p2p-network-state');
     const light = document.getElementById('p2p-status-light');
@@ -432,6 +433,255 @@ function renderP2PStatus() {
         light.className = 'status-light warn';
     }
 }
+
+// 🆕 标签切换功能
+window.switchTab = function(tabName) {
+    // 隐藏所有标签内容
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(tab => tab.classList.remove('active'));
+    
+    // 取消所有标签按钮的活跃状态
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // 显示新标签
+    const activeTab = document.getElementById(tabName);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+    
+    // 激活对应的按钮
+    event.target.classList.add('active');
+};
+
+// 🆕 敌人配队管理
+let enemyQueue = [];
+
+window.addEnemyUnit = function() {
+    const select = document.getElementById('enemy-unit-select');
+    if (!select.value) {
+        alert('请选择敌人单位');
+        return;
+    }
+    
+    // 从配置中找到单位信息
+    let unitName = select.value;
+    if (config) {
+        for (const faction of ['demacia', 'noxus', 'other']) {
+            const unit = config.units[faction]?.find(u => u.id === select.value);
+            if (unit) {
+                unitName = unit.name;
+                break;
+            }
+        }
+    }
+    
+    enemyQueue.push({ id: select.value, name: unitName, quantity: 1 });
+    renderEnemyQueue();
+};
+
+function renderEnemyQueue() {
+    const editor = document.getElementById('enemy-units-editor');
+    if (enemyQueue.length === 0) {
+        editor.innerHTML = '<div class="muted">敌人配队将显示在这里</div>';
+        return;
+    }
+    
+    let html = '';
+    enemyQueue.forEach((unit, idx) => {
+        html += `
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #2a2a2a; border-radius: 4px; margin: 0.3rem 0;">
+                <span>${unit.name}</span>
+                <input type="number" min="1" value="${unit.quantity}" 
+                    onchange="updateEnemyQuantity(${idx}, this.value)" 
+                    style="width: 50px; padding: 0.3rem; background: #1a1a1a; color: #fff; border: 1px solid #444;">
+                <button onclick="removeEnemyUnit(${idx})" style="width: auto; padding: 0.2rem 0.5rem; background: #d32f2f;">-</button>
+            </div>
+        `;
+    });
+    editor.innerHTML = html;
+}
+
+window.updateEnemyQuantity = function(idx, value) {
+    enemyQueue[idx].quantity = parseInt(value) || 1;
+};
+
+window.removeEnemyUnit = function(idx) {
+    enemyQueue.splice(idx, 1);
+    renderEnemyQueue();
+};
+
+// 🆕 根据敌人阵容推荐策略（使用相似度计算）
+window.searchByEnemyLineup = async function() {
+    const presetSelect = document.getElementById('search-enemy-preset');
+    const customInput = document.getElementById('search-enemy-custom');
+    
+    let enemyLineup = presetSelect.value || customInput.value;
+    
+    if (!enemyLineup || !enemyLineup.trim()) {
+        alert('请选择或输入敌人阵容');
+        return;
+    }
+    
+    const resultContainer = document.getElementById('similarity-recommendations');
+    resultContainer.innerHTML = '<div class="muted">正在搜索相似策略...</div>';
+    
+    try {
+        // 调用 WASM 函数进行相似度推荐
+        const recommendations = recommend_strategies_for_enemy(enemyLineup, 10);
+        
+        if (!recommendations || recommendations.length === 0) {
+            resultContainer.innerHTML = '<div class="muted">未找到对应的防守策略，请尝试其他阵容</div>';
+            return;
+        }
+        
+        let html = '<h3>推荐防守方案（按相似度排序）</h3>';
+        recommendations.forEach((rec, idx) => {
+            const similarity = Math.round(rec.similarity_score * 100);
+            html += `
+                <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border-left: 4px solid ${similarity > 70 ? '#4caf50' : '#ff9800'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0;">方案 ${idx + 1} - 相似度: ${similarity}%</h4>
+                        <span style="background: ${similarity > 70 ? '#4caf50' : '#ff9800'}; color: #000; padding: 0.3rem 0.8rem; border-radius: 4px; font-weight: bold;">
+                            ${similarity > 70 ? '高度匹配' : '部分匹配'}
+                        </span>
+                    </div>
+                    <p style="color: #aaa; margin: 0.5rem 0;">推荐阵容：<strong>${rec.counter_lineup}</strong></p>
+                    <button onclick="adoptStrategy('${rec.strategy_id}')" style="width: auto; padding: 0.4rem 0.8rem;">采纳此方案</button>
+                </div>
+            `;
+        });
+        resultContainer.innerHTML = html;
+    } catch (e) {
+        console.error('搜索失败', e);
+        resultContainer.innerHTML = '<div class="muted">搜索出错，请重试</div>';
+    }
+};
+
+// 🆕 更新数据统计面板
+async function updateDashboard() {
+    try {
+        // 官方数据统计
+        const officialData = await load_official_data();
+        if (officialData) {
+            document.getElementById('official-hero-count').textContent = String(officialData.heroes?.length || 0);
+            document.getElementById('official-building-count').textContent = String(officialData.buildings?.length || 0);
+        }
+        
+        // 本地数据统计
+        const localStrategies = await loadStrategiesFromDB();
+        document.getElementById('local-strategy-count').textContent = String(localStrategies.length);
+        
+        // 社区策略统计
+        const communityStrategies = get_strategies();
+        document.getElementById('community-strategy-count').textContent = String(Array.isArray(communityStrategies) ? communityStrategies.length : 0);
+    } catch (e) {
+        console.error('更新面板失败', e);
+    }
+}
+
+// 🆕 加载官方推荐方案
+async function loadOfficialRecommendations() {
+    try {
+        const officialData = await load_official_data();
+        if (!officialData || !officialData.heroes) {
+            return;
+        }
+        
+        const container = document.getElementById('official-recommendations-container');
+        let html = '';
+        
+        // 基于豆包报告中的建议，展示官方推荐
+        const recommendations = [
+            {
+                title: '对抗诺克萨斯龙犬',
+                description: '根据报告，龙犬是远程闪避单位，推荐使用近战单位克制',
+                counterUnits: '卫兵 × 3 + 士兵 × 2',
+                threatLevel: '⭐⭐⭐⭐'
+            },
+            {
+                title: '对抗部落战士',
+                description: '近战克制远程，需要坦克防守或远程输出',
+                counterUnits: '士兵 × 5 + 卫兵 × 3',
+                threatLevel: '⭐⭐⭐'
+            },
+            {
+                title: '对抗龙蜥飞行单位',
+                description: '飞行单位需要游侠或特定英雄应对',
+                counterUnits: '游侠 × 3 + 盖伦 × 1',
+                threatLevel: '⭐⭐⭐⭐⭐'
+            },
+            {
+                title: '均衡防守方案',
+                description: '通用高效方案，适合大多数场景',
+                counterUnits: '卫兵 × 4 + 弓兵 × 2 + 加里奥 × 1',
+                threatLevel: '⭐⭐⭐'
+            }
+        ];
+        
+        recommendations.forEach(rec => {
+            html += `
+                <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ffc107; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #ffc107;">${rec.title}</h4>
+                    <p style="margin: 0 0 0.5rem 0; color: #aaa; font-size: 0.9rem;">${rec.description}</p>
+                    <div style="background: #1a1a1a; padding: 0.8rem; border-radius: 4px; margin: 0.5rem 0;">
+                        <strong style="color: #4caf50;">推荐防守：</strong> ${rec.counterUnits}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span style="color: #ff6f00;">难度等级：${rec.threatLevel}</span>
+                        <button onclick="adoptOfficialStrategy('${rec.title}')" style="width: auto; padding: 0.4rem 0.8rem; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">采用方案</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('加载官方推荐失败', e);
+    }
+}
+
+window.adoptStrategy = function(strategyId) {
+    alert(`已采纳策略 ${strategyId}，系统将在战斗页面中应用此方案`);
+};
+
+window.adoptOfficialStrategy = function(strategyTitle) {
+    alert(`已采纳方案：${strategyTitle}，请在战斗策略编辑页面配置详细参数`);
+};
+
+// 🆕 提交战斗策略
+window.submitBattleStrategy = function() {
+    const title = document.getElementById('battle-strategy-title').value;
+    const desc = document.getElementById('battle-strategy-desc').value;
+    const tech = document.getElementById('battle-strategy-tech').value;
+    
+    if (!title || !desc) {
+        alert('请填写标题和描述');
+        return;
+    }
+    
+    // 获取敌人配队
+    const enemyLineupStr = enemyQueue.map(u => u.name).join(',');
+    
+    // 生成策略 ID
+    const strategyId = `battle_${crypto.randomUUID().slice(0, 8)}`;
+    
+    // 提交策略
+    create_strategy(
+        strategyId,
+        title,
+        desc,
+        enemyLineupStr,
+        '待配置',  // counter_lineup 待用户在下一步配置
+        tech
+    );
+    
+    alert('✅ 战斗策略已发布到德玛西亚网络！');
+    document.getElementById('battle-strategy-title').value = '';
+    document.getElementById('battle-strategy-desc').value = '';
+    enemyQueue = [];
+    renderEnemyQueue();
+};
 
 async function start() {
     await init();
@@ -502,6 +752,87 @@ async function start() {
         renderStrategies();
         renderP2PStatus();
     }, 1000);
+
+    // 🆕 加载仪表盘数据和官方推荐
+    updateDashboard();
+    loadOfficialRecommendations();
+    
+    // 🆕 更新敌人选择列表
+    if (config && config.enemy_compositions) {
+        const presetSelect = document.getElementById('search-enemy-preset');
+        presetSelect.innerHTML = '<option value="">-- 选择预设敌人阵容 --</option>';
+        config.enemy_compositions.forEach(comp => {
+            const opt = document.createElement('option');
+            opt.value = comp.units.join(',');
+            opt.textContent = `${comp.name}（威胁度: ${comp.threat_level}）`;
+            presetSelect.appendChild(opt);
+        });
+    }
+    
+    // 🆕 更新敌人单位选择列表
+    if (config) {
+        const enemyUnitSelect = document.getElementById('enemy-unit-select');
+        if (enemyUnitSelect && config.units) {
+            enemyUnitSelect.innerHTML = '<option value="">-- 选择敌人单位 --</option>';
+            for (const faction of ['noxus', 'demacia', 'other']) {
+                if (config.units[faction]) {
+                    config.units[faction].forEach(unit => {
+                        const opt = document.createElement('option');
+                        opt.value = unit.id;
+                        opt.textContent = `${unit.name} (${unit.type})`;
+                        enemyUnitSelect.appendChild(opt);
+                    });
+                }
+            }
+        }
+    }
+    
+    // 🆕 初始化防守单位列表
+    if (config && config.units) {
+        const counterContainer = document.getElementById('counter-units-available');
+        counterContainer.innerHTML = '';
+        for (const faction of ['demacia', 'noxus']) {
+            if (config.units[faction]) {
+                config.units[faction].forEach(unit => {
+                    const unitDiv = document.createElement('div');
+                    unitDiv.style.css = 'padding: 0.4rem 0.8rem; background: #2a2a2a; border-radius: 4px; cursor: move;';
+                    unitDiv.textContent = unit.name;
+                    unitDiv.draggable = true;
+                    unitDiv.ondragstart = (e) => {
+                        e.dataTransfer.effectAllowed = 'copy';
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            id: unit.id,
+                            name: unit.name,
+                            type: unit.type
+                        }));
+                    };
+                    counterContainer.appendChild(unitDiv);
+                });
+            }
+        }
+    }
+    
+    // 🆕 设置防守单位拖放容器
+    const counterSelected = document.getElementById('counter-units-selected');
+    counterSelected.ondragover = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    };
+    counterSelected.ondrop = (e) => {
+        e.preventDefault();
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const unitDiv = document.createElement('div');
+            unitDiv.style.padding = '0.4rem 0.8rem';
+            unitDiv.style.background = '#1a1a1a';
+            unitDiv.style.border = '1px solid #4caf50';
+            unitDiv.style.borderRadius = '4px';
+            unitDiv.textContent = data.name;
+            counterSelected.appendChild(unitDiv);
+        } catch (e) {
+            // 忽略无效数据
+        }
+    };
 
     renderP2PStatus();
 }

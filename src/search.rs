@@ -233,3 +233,38 @@ pub fn query(q: &str, limit: usize) -> Vec<SearchHit> {
     let idx = INDEX.lock().unwrap();
     idx.search(q, limit)
 }
+// 🆕 阵容相似度计算：比对两个阵容的单位组成
+pub fn calculate_lineup_similarity(lineup_a: &str, lineup_b: &str) -> f32 {
+    let units_a: HashSet<&str> = lineup_a.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    let units_b: HashSet<&str> = lineup_b.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    
+    if units_a.is_empty() && units_b.is_empty() {
+        return 1.0;
+    }
+    if units_a.is_empty() || units_b.is_empty() {
+        return 0.0;
+    }
+    
+    let intersection = units_a.intersection(&units_b).count();
+    let union = units_a.union(&units_b).count();
+    
+    intersection as f32 / union as f32
+}
+
+// 🆕 根据敌人阵容推荐应对策略
+pub fn recommend_counters(enemy_lineup: &str, strategies: &[WildStrategy], limit: usize) -> Vec<(String, String, f32)> {
+    let mut recommendations: Vec<(String, String, f32)> = strategies
+        .iter()
+        .map(|s| {
+            let similarity = calculate_lineup_similarity(&s.target_hero, enemy_lineup);
+            let score_boost = (s.score.max(0.0) / 50.0).min(1.0);
+            let combined_score = similarity * 0.6 + score_boost * 0.4;
+            (s.id.clone(), s.counter_lineup.clone(), combined_score)
+        })
+        .filter(|(_, _, score)| *score > 0.0)
+        .collect();
+    
+    recommendations.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+    recommendations.truncate(limit);
+    recommendations
+}

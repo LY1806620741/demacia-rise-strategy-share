@@ -127,3 +127,22 @@ pub fn search(query: &str, limit: usize) -> JsValue {
     let hits = idx::query(query, limit.max(1));
     to_value(&hits).unwrap()
 }
+
+// 🆕 根据敌人阵容推荐防守策略
+#[wasm_bindgen]
+pub fn recommend_strategies_for_enemy(enemy_lineup: &str, limit: usize) -> JsValue {
+    let strategies = unsafe { &crate::storage::STRATEGIES };
+    let recommendations = idx::recommend_counters(enemy_lineup, strategies, limit.max(1));
+    
+    let result: Vec<_> = recommendations.into_iter()
+        .map(|(id, counter, similarity)| {
+            serde_json::json!({
+                "strategy_id": id,
+                "counter_lineup": counter,
+                "similarity_score": similarity
+            })
+        })
+        .collect();
+    
+    to_value(&result).unwrap()
+}
