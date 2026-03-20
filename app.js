@@ -457,29 +457,6 @@ window.switchTab = function(tabName) {
 // 🆕 敌人配队管理
 let enemyQueue = [];
 
-window.addEnemyUnit = function() {
-    const select = document.getElementById('enemy-unit-select');
-    if (!select.value) {
-        alert('请选择敌人单位');
-        return;
-    }
-    
-    // 从配置中找到单位信息
-    let unitName = select.value;
-    if (config) {
-        for (const faction of ['demacia', 'noxus', 'other']) {
-            const unit = config.units[faction]?.find(u => u.id === select.value);
-            if (unit) {
-                unitName = unit.name;
-                break;
-            }
-        }
-    }
-    
-    enemyQueue.push({ id: select.value, name: unitName, quantity: 1 });
-    renderEnemyQueue();
-};
-
 function renderEnemyQueue() {
     const editor = document.getElementById('enemy-units-editor');
     if (enemyQueue.length === 0) {
@@ -502,8 +479,96 @@ function renderEnemyQueue() {
     editor.innerHTML = html;
 }
 
-window.updateEnemyQuantity = function(idx, value) {
-    enemyQueue[idx].quantity = parseInt(value) || 1;
+function getAllEnemyUnits() {
+    if (!config || !config.units) return [];
+    return ['noxus', 'demacia', 'other'].flatMap(faction => {
+        return (config.units[faction] || []).map(u => ({
+            id: u.id,
+            name: u.name,
+            type: u.type,
+            faction: faction
+        }));
+    });
+}
+
+function renderEnemyUnitList(filter = '') {
+    const list = document.getElementById('enemy-unit-list');
+    if (!list || !config) return;
+
+    const normalized = filter.trim().toLowerCase();
+    const allUnits = getAllEnemyUnits();
+    const filtered = allUnits.filter(u => {
+        return !normalized || u.name.toLowerCase().includes(normalized) || u.id.toLowerCase().includes(normalized);
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="muted">未找到符合条件的敌人单位</div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(unit => `
+        <div style="display: flex; flex-direction: column; justify-content: space-between; background: #222; border: 1px solid #444; border-radius: 4px; padding: 0.4rem; min-height: 80px;">
+            <div>
+                <div style="font-weight: bold;">${unit.name}</div>
+                <div style="font-size: 0.8rem; color: #aaa;">${unit.id} / ${unit.type}</div>
+            </div>
+            <button onclick="addEnemyUnit('${unit.id}')" style="margin-top: 0.25rem; padding: 0.25rem 0.4rem; background: #3a8cff; border: none; color: #fff; border-radius: 3px;">+ 添加</button>
+        </div>
+    `).join('');
+}
+
+window.setupEnemyUnitPicker = function() {
+    renderEnemyUnitList();
+    const searchInput = document.getElementById('enemy-unit-search');
+    if (!searchInput) return;
+    searchInput.addEventListener('input', () => renderEnemyUnitList(searchInput.value));
+}
+
+window.findEnemyUnit = function(arg) {
+    if (!config) return null;
+    const key = arg ? arg.toString().trim().toLowerCase() : '';
+    if (!key) return null;
+
+    return getAllEnemyUnits().find(u => u.id.toLowerCase() === key || u.name.toLowerCase() === key || u.name.toLowerCase().includes(key));
+}
+
+window.addEnemyUnit = function(unitId) {
+    // 支持通过按钮传递 unitId，或搜索框输入后回车/确认
+    if (!unitId) {
+        const search = document.getElementById('enemy-unit-search');
+        if (!search) {
+            alert('敌人单位选择控件未找到');
+            return;
+        }
+        if (!search.value.trim()) {
+            alert('请输入敌人单位名称或ID');
+            return;
+        }
+        const unit = findEnemyUnit(search.value);
+        if (!unit) {
+            alert('未找到对应敌人单位，请检查拼写');
+            return;
+        }
+        unitId = unit.id;
+    }
+
+    const targetUnit = findEnemyUnit(unitId);
+    if (!targetUnit) {
+        alert('未找到敌人单位，请刷新后重试');
+        return;
+    }
+
+    const existing = enemyQueue.find(u => u.id === targetUnit.id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        enemyQueue.push({ id: targetUnit.id, name: targetUnit.name, quantity: 1 });
+    }
+
+    renderEnemyQueue();
+};
+
+window.updateEnemyQuantity = function(idx, value) {    enemyQueue[idx].quantity = parseInt(value) || 1;
 };
 
 window.removeEnemyUnit = function(idx) {
@@ -583,58 +648,77 @@ async function updateDashboard() {
 // 🆕 加载官方推荐方案
 async function loadOfficialRecommendations() {
     try {
-        const officialData = await load_official_data();
-        if (!officialData || !officialData.heroes) {
-            return;
-        }
-        
         const container = document.getElementById('official-recommendations-container');
+        if (!container) return;
+
+        const allLineups = await queryDB('lineups', 'all');
+        const officialLineups = Array.isArray(allLineups)
+            ? allLineups.filter(item => item && item.name && item.name.startsWith('官方推荐'))
+            : [];
+
         let html = '';
-        
-        // 基于豆包报告中的建议，展示官方推荐
-        const recommendations = [
-            {
-                title: '对抗诺克萨斯龙犬',
-                description: '根据报告，龙犬是远程闪避单位，推荐使用近战单位克制',
-                counterUnits: '卫兵 × 3 + 士兵 × 2',
-                threatLevel: '⭐⭐⭐⭐'
-            },
-            {
-                title: '对抗部落战士',
-                description: '近战克制远程，需要坦克防守或远程输出',
-                counterUnits: '士兵 × 5 + 卫兵 × 3',
-                threatLevel: '⭐⭐⭐'
-            },
-            {
-                title: '对抗龙蜥飞行单位',
-                description: '飞行单位需要游侠或特定英雄应对',
-                counterUnits: '游侠 × 3 + 盖伦 × 1',
-                threatLevel: '⭐⭐⭐⭐⭐'
-            },
-            {
-                title: '均衡防守方案',
-                description: '通用高效方案，适合大多数场景',
-                counterUnits: '卫兵 × 4 + 弓兵 × 2 + 加里奥 × 1',
-                threatLevel: '⭐⭐⭐'
-            }
-        ];
-        
-        recommendations.forEach(rec => {
-            html += `
-                <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ffc107; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                    <h4 style="margin: 0 0 0.5rem 0; color: #ffc107;">${rec.title}</h4>
-                    <p style="margin: 0 0 0.5rem 0; color: #aaa; font-size: 0.9rem;">${rec.description}</p>
-                    <div style="background: #1a1a1a; padding: 0.8rem; border-radius: 4px; margin: 0.5rem 0;">
-                        <strong style="color: #4caf50;">推荐防守：</strong> ${rec.counterUnits}
+
+        if (officialLineups.length > 0) {
+            officialLineups.forEach(lineup => {
+                html += `
+                    <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #4caf50; box-shadow: 0 2px 8px rgba(0,0,0,0.3); margin-bottom: 0.8rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #4caf50;">${lineup.name}</h4>
+                        <p style="margin: 0 0 0.5rem 0; color: #aaa; font-size: 0.9rem;">${lineup.description || '官方推荐策略'}</p>
+                        <div style="background: #1a1a1a; padding: 0.8rem; border-radius: 4px; margin: 0.5rem 0;">
+                            <strong style="color: #4caf50;">推荐防守：</strong> ${Array.isArray(lineup.units) ? lineup.units.join(' + ') : 'N/A'}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <span style="color: #ff6f00;">点赞 ${lineup.likes || 0} / 踩 ${lineup.dislikes || 0}</span>
+                            <button onclick="adoptOfficialStrategy('${lineup.name}')" style="width: auto; padding: 0.4rem 0.8rem; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">采用方案</button>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                        <span style="color: #ff6f00;">难度等级：${rec.threatLevel}</span>
-                        <button onclick="adoptOfficialStrategy('${rec.title}')" style="width: auto; padding: 0.4rem 0.8rem; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">采用方案</button>
+                `;
+            });
+        } else {
+            // Fallback 到内置推荐
+            const recommendations = [
+                {
+                    title: '对抗诺克萨斯龙犬',
+                    description: '根据报告，龙犬是远程闪避单位，推荐使用近战单位克制',
+                    counterUnits: '卫兵 × 3 + 士兵 × 2',
+                    threatLevel: '⭐⭐⭐⭐'
+                },
+                {
+                    title: '对抗部落战士',
+                    description: '近战克制远程，需要坦克防守或远程输出',
+                    counterUnits: '士兵 × 5 + 卫兵 × 3',
+                    threatLevel: '⭐⭐⭐'
+                },
+                {
+                    title: '对抗龙蜥飞行单位',
+                    description: '飞行单位需要游侠或特定英雄应对',
+                    counterUnits: '游侠 × 3 + 盖伦 × 1',
+                    threatLevel: '⭐⭐⭐⭐⭐'
+                },
+                {
+                    title: '均衡防守方案',
+                    description: '通用高效方案，适合大多数场景',
+                    counterUnits: '卫兵 × 4 + 弓兵 × 2 + 加里奥 × 1',
+                    threatLevel: '⭐⭐⭐'
+                }
+            ];
+            recommendations.forEach(rec => {
+                html += `
+                    <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ffc107; box-shadow: 0 2px 8px rgba(0,0,0,0.3); margin-bottom: 0.8rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #ffc107;">${rec.title}</h4>
+                        <p style="margin: 0 0 0.5rem 0; color: #aaa; font-size: 0.9rem;">${rec.description}</p>
+                        <div style="background: #1a1a1a; padding: 0.8rem; border-radius: 4px; margin: 0.5rem 0;">
+                            <strong style="color: #4caf50;">推荐防守：</strong> ${rec.counterUnits}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <span style="color: #ff6f00;">难度等级：${rec.threatLevel}</span>
+                            <button onclick="adoptOfficialStrategy('${rec.title}')" style="width: auto; padding: 0.4rem 0.8rem; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">采用方案</button>
+                        </div>
                     </div>
-                </div>
-            `;
-        });
-        
+                `;
+            });
+        }
+
         container.innerHTML = html;
     } catch (e) {
         console.error('加载官方推荐失败', e);
@@ -757,7 +841,7 @@ async function start() {
     updateDashboard();
     loadOfficialRecommendations();
     
-    // 🆕 更新敌人选择列表
+    // 🆕 更新预设敌人阵容和可搜敌人单位列表
     if (config && config.enemy_compositions) {
         const presetSelect = document.getElementById('search-enemy-preset');
         presetSelect.innerHTML = '<option value="">-- 选择预设敌人阵容 --</option>';
@@ -768,23 +852,9 @@ async function start() {
             presetSelect.appendChild(opt);
         });
     }
-    
-    // 🆕 更新敌人单位选择列表
+
     if (config) {
-        const enemyUnitSelect = document.getElementById('enemy-unit-select');
-        if (enemyUnitSelect && config.units) {
-            enemyUnitSelect.innerHTML = '<option value="">-- 选择敌人单位 --</option>';
-            for (const faction of ['noxus', 'demacia', 'other']) {
-                if (config.units[faction]) {
-                    config.units[faction].forEach(unit => {
-                        const opt = document.createElement('option');
-                        opt.value = unit.id;
-                        opt.textContent = `${unit.name} (${unit.type})`;
-                        enemyUnitSelect.appendChild(opt);
-                    });
-                }
-            }
-        }
+        setupEnemyUnitPicker();
     }
     
     // 🆕 初始化防守单位列表
