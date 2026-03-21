@@ -106,6 +106,11 @@ pub fn p2p_receive_json(json: &str) {
 }
 
 #[wasm_bindgen]
+pub fn p2p_receive_history_json(json: &str) -> usize {
+    import_remote_strategies_from_json(json)
+}
+
+#[wasm_bindgen]
 pub fn create_p2p_node() -> P2PNode {
     P2PNode {}
 }

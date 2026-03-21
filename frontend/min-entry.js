@@ -1,7 +1,7 @@
 import { state, NODE_TTL } from './state.js';
 import { byId, wasmArray, debounce, escapeHtml, highlight, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
-import init, { create_strategy, create_p2p_node, get_strategies, load_official_data, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
+import init, { create_strategy, create_p2p_node, get_strategies, load_official_data, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
 
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 const P2P_CHANNEL_NAME = 'demacia-rise-p2p';
@@ -134,12 +134,30 @@ function receiveStrategyPayload(json, sourceNodeId) {
     markPeerSeen(sourceNodeId, { transport: 'browser-local' });
     p2p_receive_json(json);
     renderStrategyList();
+    renderSearchResults();
     updateDashboard();
   }
 }
 
+function sendHistoryToNode(targetNodeId) {
+  if (!targetNodeId || targetNodeId === state.nodeId) return;
+  const strategies = wasmArray(get_strategies());
+  if (!strategies.length) return;
+  broadcastP2PEnvelope('history_response', JSON.stringify(strategies), { targetNodeId });
+}
+
+function importHistoryPayload(payload, sourceNodeId) {
+  if (!payload || sourceNodeId === state.nodeId) return;
+  markPeerSeen(sourceNodeId, { transport: 'browser-local' });
+  p2p_receive_history_json(payload);
+  renderStrategyList();
+  renderSearchResults();
+  updateDashboard();
+}
+
 function handleP2PEnvelope(envelope) {
   if (!envelope || envelope.sourceNodeId === state.nodeId) return;
+  if (envelope.targetNodeId && envelope.targetNodeId !== state.nodeId) return;
   if (envelope.messageId && !rememberP2PMessage(envelope.messageId)) return;
 
   if (envelope.type === 'heartbeat') {
@@ -148,12 +166,24 @@ function handleP2PEnvelope(envelope) {
     return;
   }
 
+  if (envelope.type === 'history_request') {
+    markPeerSeen(envelope.sourceNodeId, { transport: envelope.transport || 'browser-local' });
+    sendHistoryToNode(envelope.sourceNodeId);
+    updateDashboard();
+    return;
+  }
+
+  if (envelope.type === 'history_response' && typeof envelope.payload === 'string') {
+    importHistoryPayload(envelope.payload, envelope.sourceNodeId);
+    return;
+  }
+
   if (envelope.type === 'strategy' && typeof envelope.payload === 'string') {
     receiveStrategyPayload(envelope.payload, envelope.sourceNodeId);
   }
 }
 
-function broadcastP2PEnvelope(type, payload = null) {
+function broadcastP2PEnvelope(type, payload = null, extra = {}) {
   const envelope = {
     type,
     payload,
@@ -161,6 +191,7 @@ function broadcastP2PEnvelope(type, payload = null) {
     transport: state.p2pChannel ? 'broadcast-channel' : 'storage-event',
     messageId: `${state.nodeId}:${type}:${nowMs()}:${Math.random().toString(36).slice(2, 8)}`,
     sentAt: nowMs(),
+    ...extra,
   };
 
   rememberP2PMessage(envelope.messageId);
@@ -243,27 +274,38 @@ function renderHeroList() {
     : '<div class="muted">暂无官方英雄数据</div>';
 }
 
+function buildStrategyTitle(description, target) {
+  const desc = (description || '').trim();
+  if (desc) {
+    return desc.length > 24 ? `${desc.slice(0, 24)}…` : desc;
+  }
+  return target ? `针对 ${target}` : '未命名策略';
+}
+
 function renderStrategyList() {
   const list = byId('strategy-list');
   if (!list) return;
   const strategies = wasmArray(get_strategies());
   list.innerHTML = strategies.length
-    ? strategies.slice().reverse().map(strategy => `
+    ? strategies.slice().reverse().map(strategy => {
+      const displayTitle = strategy.description || strategy.title || '未命名策略';
+      return `
       <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.8rem;">
         <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
-          <strong>${escapeHtml(strategy.title)}</strong>
+          <strong>${escapeHtml(displayTitle)}</strong>
           <span class="muted">评分 ${Number(strategy.score || 0).toFixed(1)}</span>
         </div>
         <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy.target_hero || '未填写')}</div>
         <div style="margin:.45rem 0;"><strong>应对阵容：</strong>${escapeHtml(strategy.counter_lineup || '未填写')}</div>
         <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy.counter_tech || '未填写')}</div>
-        <div class="muted">${escapeHtml(strategy.description || '')}</div>
+        <div class="muted">${escapeHtml(strategy.description || '暂无说明')}</div>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;">
           <button type="button" onclick="voteStrategy('${strategy.id}', true)">👍 ${strategy.likes || 0}</button>
           <button type="button" onclick="voteStrategy('${strategy.id}', false)">👎 ${strategy.dislikes || 0}</button>
         </div>
       </div>
-    `).join('')
+    `;
+    }).join('')
     : '<div class="muted">暂无社区策略，快发布第一条吧</div>';
 
   updateDashboard();
@@ -364,23 +406,23 @@ function switchTab(tabId) {
 }
 
 function submitBattleStrategy() {
-  const title = byId('battle-strategy-title')?.value?.trim() || '';
   const desc = byId('battle-strategy-desc')?.value?.trim() || '';
   const target = (state.enemyLineupDraft || formatLineup(state.enemyQueue)).trim();
   const counter = state.selectedCounterUnits.map(unit => unit.name).join(', ');
   const tech = Array.from(state.selectedBattleTechs).join(', ') || '未选择科技';
 
-  if (!title || !target || !counter) {
-    window.alert('请至少填写策略标题、敌人阵容和应对阵容。');
+  if (!desc || !target || !counter) {
+    window.alert('请至少填写策略描述、敌人阵容和应对阵容。');
     return;
   }
 
   const id = `strategy-${nowMs()}-${Math.random().toString(36).slice(2, 8)}`;
+  const title = buildStrategyTitle(desc, target);
   create_strategy(id, title, desc, target, counter, tech);
   renderStrategyList();
+  searchByEnemyLineup();
   updateDashboard();
 
-  byId('battle-strategy-title').value = '';
   byId('battle-strategy-desc').value = '';
   state.enemyQueue = [];
   state.enemyLineupDraft = '';
@@ -403,20 +445,27 @@ function searchByEnemyLineup() {
 
   const recommendations = wasmArray(recommend_strategies_for_enemy(query, 8));
   if (!recommendations.length) {
-    container.innerHTML = '<div class="muted">暂无匹配策略，试试先发布一条社区策略</div>';
+    container.innerHTML = `
+      <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;">
+        <strong>暂无匹配策略</strong>
+        <div class="muted" style="margin-top:.45rem;">没有找到足够相似的社区方案，你可以继续在下方补充应对阵容、科技和描述，然后直接发布。</div>
+      </div>
+    `;
     return;
   }
 
   const strategies = wasmArray(get_strategies());
   container.innerHTML = recommendations.map(item => {
     const strategy = strategies.find(s => s.id === item.strategy_id);
+    const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
     return `
       <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;">
         <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
-          <strong>${escapeHtml(strategy?.title || item.strategy_id)}</strong>
+          <strong>${escapeHtml(displayTitle)}</strong>
           <span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span>
         </div>
         <div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div>
+        <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div>
         <div class="muted">${escapeHtml(strategy?.description || '')}</div>
       </div>
     `;
@@ -426,21 +475,8 @@ function searchByEnemyLineup() {
 function renderSearchResults() {
   const q = byId('q')?.value?.trim() || '';
   const scope = byId('search-scope')?.value || 'all';
-  const enemyQuery = byId('search-enemy-query')?.value?.trim() || '';
   const container = byId('search-results');
   if (!container) return;
-
-  if (scope === 'enemy_lineup') {
-    const results = wasmArray(recommend_strategies_for_enemy(enemyQuery, 10));
-    container.innerHTML = results.length ? results.map(item => `
-      <div style="padding:.8rem;border:1px solid #333;border-radius:8px;margin-bottom:.6rem;background:#171717;">
-        <strong>${escapeHtml(item.strategy_id)}</strong>
-        <div style="margin-top:.35rem;">${escapeHtml(item.counter_lineup || '')}</div>
-        <div class="muted">匹配度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</div>
-      </div>
-    `).join('') : '<div class="muted">未找到匹配的敌人阵容策略</div>';
-    return;
-  }
 
   if (!q) {
     container.innerHTML = '<div class="muted">请输入关键词进行检索</div>';
@@ -464,14 +500,22 @@ function renderSearchResults() {
 }
 
 function voteStrategy(id, isLike) {
+  if (!id) return;
   vote(id, isLike);
   renderStrategyList();
+  renderSearchResults();
+  searchByEnemyLineup();
+  updateDashboard();
 }
 
+const voteOnStrategy = voteStrategy;
+
 function setupSearchBindings() {
-  byId('enemy-lineup-text-input')?.addEventListener('input', debounce(handleEnemyTextInput, 150));
+  byId('enemy-lineup-text-input')?.addEventListener('input', debounce(() => {
+    handleEnemyTextInput();
+    searchByEnemyLineup();
+  }, 150));
   byId('q')?.addEventListener('input', debounce(renderSearchResults, 150));
-  byId('search-enemy-query')?.addEventListener('input', debounce(renderSearchResults, 150));
   byId('search-scope')?.addEventListener('change', renderSearchResults);
 }
 
@@ -494,6 +538,7 @@ async function bootstrap() {
   state.lastHeartbeatAt = 0;
   state.p2pNode = create_p2p_node();
   syncKnownNodes();
+  broadcastP2PEnvelope('history_request');
   if (state.nodeHeartBeatTimer) clearInterval(state.nodeHeartBeatTimer);
   state.nodeHeartBeatTimer = setInterval(syncKnownNodes, Math.max(2000, Math.floor(NODE_TTL / 2)));
 
@@ -549,6 +594,7 @@ Object.assign(window, {
   submitBattleStrategy,
   searchByEnemyLineup,
   voteStrategy,
+  voteOnStrategy,
 });
 
 bootstrap();

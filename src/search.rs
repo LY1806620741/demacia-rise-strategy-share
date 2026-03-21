@@ -189,12 +189,30 @@ fn compare_rank_desc(a: f32, b: f32) -> Ordering {
     b.partial_cmp(&a).unwrap_or(Ordering::Equal)
 }
 
+fn normalize_lineup_token(token: &str) -> Option<String> {
+    let normalized = token
+        .trim()
+        .trim_matches(|c: char| matches!(c, '[' | ']' | '(' | ')' | '（' | '）'));
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let lowered = normalized.to_lowercase();
+    let cleaned = lowered
+        .split_whitespace()
+        .filter(|part| !part.is_empty() && !part.starts_with('x') && !part.chars().all(|ch| ch.is_ascii_digit()))
+        .collect::<Vec<_>>()
+        .join("");
+
+    let cleaned = cleaned.trim_matches(|c: char| matches!(c, '+' | '＋' | '*' | '×' | ':' | '：')).trim().to_string();
+    if cleaned.is_empty() { None } else { Some(cleaned) }
+}
+
 fn normalized_lineup_units(lineup: &str) -> HashSet<String> {
     lineup
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_lowercase())
+        .split(|c: char| matches!(c, ',' | '，' | ';' | '；' | '\n' | '\t' | '|' | '/'))
+        .flat_map(|segment| segment.split(['+', '＋']))
+        .filter_map(normalize_lineup_token)
         .collect()
 }
 
@@ -356,5 +374,45 @@ mod tests {
     fn make_snippet_handles_multibyte_queries() {
         let snippet = make_snippet("前排卫兵 后排弓兵 侧翼骑兵", "弓兵", 8);
         assert!(snippet.contains("弓兵"));
+    }
+
+    #[test]
+    fn lineup_similarity_supports_editor_style_counts_and_chinese_punctuation() {
+        let score = calculate_lineup_similarity(
+            "诺克萨斯步兵 x2，诺克萨斯战斗法师 x1",
+            "诺克萨斯步兵, 诺克萨斯战斗法师",
+        );
+        assert!((score - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recommend_counters_matches_editor_input_format() {
+        let strategies = vec![
+            WildStrategy {
+                id: "best-format".into(),
+                title: "strategy-best-format".into(),
+                description: "克制步兵法师组合".into(),
+                target_hero: "诺克萨斯步兵, 诺克萨斯战斗法师".into(),
+                counter_lineup: "卫兵, 娑娜".into(),
+                counter_tech: "战场扩增".into(),
+                likes: 0,
+                dislikes: 0,
+                score: 15.0,
+            },
+            WildStrategy {
+                id: "other-format".into(),
+                title: "strategy-other-format".into(),
+                description: "针对龙蜥".into(),
+                target_hero: "龙蜥".into(),
+                counter_lineup: "游侠".into(),
+                counter_tech: "战场扩增".into(),
+                likes: 0,
+                dislikes: 0,
+                score: 15.0,
+            },
+        ];
+
+        let recommendations = recommend_counters("诺克萨斯步兵 x2，诺克萨斯战斗法师 x1", &strategies, 5);
+        assert_eq!(recommendations.first().map(|item| item.0.as_str()), Some("best-format"));
     }
 }

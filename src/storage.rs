@@ -38,17 +38,67 @@ pub fn vote_strategy(id: &str, is_like: bool) {
     }
 }
 
+pub fn add_remote_strategy(s: WildStrategy) {
+    upsert_strategy(s, false);
+}
+
 pub fn add_remote_strategy_from_json(json: &str) {
     match serde_json::from_str::<WildStrategy>(json) {
         Ok(s) => {
-            let already_exists = STRATEGIES.lock().unwrap().iter().any(|exist| exist.id == s.id);
-            if already_exists {
-                return;
-            }
-
-            upsert_strategy(s, true);
+            add_remote_strategy(s);
             console::log_1(&"✅ P2P：已同步外部策略".into());
         }
         Err(_) => console::log_1(&"❌ P2P：数据格式错误".into()),
+    }
+}
+
+pub fn import_remote_strategies_from_json(json: &str) -> usize {
+    match serde_json::from_str::<Vec<WildStrategy>>(json) {
+        Ok(strategies) => {
+            let count = strategies.len();
+            for strategy in strategies {
+                add_remote_strategy(strategy);
+            }
+            count
+        }
+        Err(_) => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_strategy(id: &str, title: &str) -> WildStrategy {
+        WildStrategy {
+            id: id.into(),
+            title: title.into(),
+            description: "desc".into(),
+            target_hero: "敌人阵容A".into(),
+            counter_lineup: "卫兵, 游侠".into(),
+            counter_tech: "战场扩增".into(),
+            likes: 1,
+            dislikes: 0,
+            score: 12.0,
+        }
+    }
+
+    #[test]
+    fn bulk_import_upserts_remote_history() {
+        STRATEGIES.lock().unwrap().clear();
+
+        let payload = serde_json::to_string(&vec![
+            sample_strategy("sync-1", "旧标题"),
+            sample_strategy("sync-2", "第二条"),
+        ]).unwrap();
+        assert_eq!(import_remote_strategies_from_json(&payload), 2);
+        assert_eq!(get_strategies_snapshot().len(), 2);
+
+        let updated = serde_json::to_string(&vec![sample_strategy("sync-1", "新标题")]).unwrap();
+        assert_eq!(import_remote_strategies_from_json(&updated), 1);
+
+        let strategies = get_strategies_snapshot();
+        assert_eq!(strategies.len(), 2);
+        assert!(strategies.iter().any(|s| s.id == "sync-1" && s.title == "新标题"));
     }
 }
