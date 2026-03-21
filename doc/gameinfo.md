@@ -162,3 +162,15 @@
 龙蜥以远程单位为攻击目标，但
 移动速度极其缓慢。游侠的十字弩
 能射穿其护甲。
+
+
+# 相关资料
+
+https://lcu.vivide.re/
+https://developer.riotgames.com/docs/lol
+https://ddragon.leagueoflegends.com/api/versions.json
+https://ddragon.leagueoflegends.com/cdn/16.6.1/data/zh_CN/champion.json
+
+# 资源文件
+
+语音: 英雄联盟\LeagueClient\Plugins\rcp-fe-lol-navigation\assets.wad\File3679.ogg File3697.ogg File0263.ogg中文
