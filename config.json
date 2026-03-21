@@ -1,285 +1,79 @@
 {
   "heroes": [
-    {"id": "garen", "name": "盖伦", "type": "fighter", "role": "demacia", "threat": "medium"},
-    {"id": "lux", "name": "拉克丝", "type": "mage", "role": "demacia", "threat": "medium"},
-    {"id": "jarvan", "name": "嘉文", "type": "tank", "role": "demacia", "threat": "medium"},
-    {"id": "quinn", "name": "奎因", "type": "ranged", "role": "demacia", "threat": "low"},
-    {"id": "sylas", "name": "塞拉斯", "type": "fighter", "role": "demacia", "threat": "high"},
-    {"id": "poppy", "name": "波比", "type": "tank", "role": "demacia", "threat": "low"},
-    {"id": "darius", "name": "达瑞斯", "type": "fighter", "role": "noxus", "threat": "extreme"},
-    {"id": "swain", "name": "斯维因", "type": "mage", "role": "noxus", "threat": "high"},
-    {"id": "katarina", "name": "卡特琳娜", "type": "assassin", "role": "noxus", "threat": "high"},
-    {"id": "leblanc", "name": "勒布朗", "type": "mage", "role": "noxus", "threat": "extreme"},
-    {"id": "ahri", "name": "阿狸", "type": "mage", "role": "other", "threat": "high"},
-    {"id": "evelynn", "name": "伊芙琳", "type": "assassin", "role": "other", "threat": "extreme"},
-    {"id": "teemo", "name": "提莫", "type": "ranged", "role": "bandle", "threat": "low"},
-    {"id": "twisted_fate", "name": "崔斯特", "type": "mage", "role": "other", "threat": "high"},
-    {"id": "zed", "name": "瑞兹", "type": "assassin", "role": "other", "threat": "extreme"}
-  ],
-  "map_nodes": {
-    "capital": [
-      {"id": "demacia_city", "name": "德玛西亚雄都", "description": "主城，初始据点。主要建筑为兵营和禁魔石磨坊。"},
-      {"id": "zeffira", "name": "泽菲拉", "description": "后期解锁的高级首都据点，其功能与雄都一致。"}
-    ],
-    "heartland": [
-      {"id": "vaskasia", "name": "瓦斯卡西亚"},
-      {"id": "brookhollow", "name": "布鲁克霍洛"},
-      {"id": "tylburne", "name": "泰尔本"},
-      {"id": "jandelle", "name": "詹德尔"}
-    ],
-    "mountain": [
-      {"id": "high_silvermere", "name": "密银城", "description": "龙禽骑兵的基地。采石场产出加成最高（5.0）。"},
-      {"id": "uwendale", "name": "厄文戴尔", "description": "拉克丝的家乡。采石场加成同为 5.0。"},
-      {"id": "pinara", "name": "平纳拉", "description": "常规山地采石场据点。"},
-      {"id": "evenmoor", "name": "永沼镇", "description": "特殊山地据点。除了采石场，还可建造独特建筑：面纱夫人祭坛（提供减伤）和杜朗的工作室（减少研究成本）。"}
-    ],
-    "border": [
-      {"id": "terbisia", "name": "特比西亚"},
-      {"id": "cloudfield", "name": "云野"},
-      {"id": "meltridge", "name": "熔岩脊"},
-      {"id": "fossbarrow", "name": "福斯拜罗"}
-    ]
-  },
-  "enemies": [
-    {"id": "drakehound", "name": "龙犬", "type": "melee", "category": "wild", "description": "近战型。攻击行为是向单个目标扑击。"},
-    {"id": "krug", "name": "石甲虫", "type": "melee", "category": "wild", "description": "近战型。防御力极高，显著减少受到的近战伤害，建议使用远程单位处理。"},
-    {"id": "tribal_warrior", "name": "部落战士", "type": "melee", "category": "wild", "description": "近战型。会优先攻击远程单位，建议布置足够的防守位保护后排。"},
-    {"id": "troll", "name": "巨魔", "type": "ranged", "category": "wild", "description": "远程型。向单个目标投掷斧头，造成高额单体伤害。"},
-    {"id": "yeti", "name": "雪人", "type": "ranged", "category": "wild", "description": "远程型。投掷巨石并造成范围伤害。"},
-    {"id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "近战型。基础兵种，对德玛西亚卫兵有额外加成。"},
-    {"id": "noxian_drakhound", "name": "诺克萨斯龙犬", "type": "melee", "category": "noxus", "description": "近战型。训练有素，能轻松躲避远程单位的箭矢。"},
-    {"id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "近战型。优先寻找弓箭手，且对布甲单位有攻击加成，但对巡林客的弩箭抗性较低。"},
-    {"id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "远程型。投掷范围火球，克制近战坦克，但自身极为脆弱。"},
-    {"id": "noxian_mauler", "name": "诺克萨斯重锤兵", "type": "melee", "category": "noxus", "description": "近战型。血量极厚，当血量降至 50% 以下时会进入狂暴状态，攻击速度大幅提升。"},
-    {"id": "cloud_drake", "name": "云端巨龙", "type": "melee", "category": "boss", "description": "特殊近战单位。每四次攻击会释放狂风，直接击杀轻甲单位（如卫兵和弓箭手）。"},
-    {"id": "yeti_boss", "name": "雪人首领", "type": "ranged", "category": "boss", "description": "在特定战役或探索点出现的强力单位。"},
-    {"id": "zeffira_final", "name": "泽菲拉最终战", "type": "mixed", "category": "boss", "description": "第二幕的终点，通常涉及大规模诺克萨斯军团的围攻。"}
+    { "id": "sona", "name": "娑娜", "type": "ranged", "description": "琴瑟仙女娑娜能造成远程伤害，并能提升其他远程部队的攻击力。" }
   ],
   "units": {
     "demacia": [
-      {"id": "garen", "name": "盖伦", "type": "hero", "tier": 3},
-      {"id": "lux", "name": "拉克丝", "type": "hero", "tier": 2},
-      {"id": "jarvan", "name": "嘉文", "type": "hero", "tier": 2},
-      {"id": "quinn", "name": "奎因", "type": "hero", "tier": 1},
-      {"id": "sylas", "name": "塞拉斯", "type": "hero", "tier": 3},
-      {"id": "poppy", "name": "波比", "type": "hero", "tier": 1},
-      {"id": "demacia_soldier", "name": "德玛西亚卫兵", "type": "soldier", "tier": 1},
-      {"id": "demacia_mage_unit", "name": "德玛西亚法师", "type": "mage", "tier": 2}
-    ],
-    "noxus": [
-      {"id": "noxus_soldier", "name": "诺克萨斯卫兵", "type": "soldier", "tier": 1},
-      {"id": "noxus_knight", "name": "诺克萨斯骑士", "type": "cavalry", "tier": 2},
-      {"id": "darius", "name": "达瑞斯", "type": "hero", "tier": 3},
-      {"id": "swain", "name": "斯维因", "type": "hero", "tier": 3},
-      {"id": "katarina", "name": "卡特琳娜", "type": "hero", "tier": 2},
-      {"id": "noxus_siege", "name": "诺克萨斯攻城兵", "type": "siege", "tier": 2},
-      {"id": "noxus_mage", "name": "诺克萨斯术士", "type": "mage", "tier": 2},
-      {"id": "noxus_assassin", "name": "诺克萨斯刺客", "type": "assassin", "tier": 2}
-    ],
-    "other": [
-      {"id": "teemo", "name": "提莫", "type": "hero", "tier": 1},
-      {"id": "ahri", "name": "阿狸", "type": "hero", "tier": 2},
-      {"id": "leblanc", "name": "勒布朗", "type": "hero", "tier": 3},
-      {"id": "evelynn", "name": "伊芙琳", "type": "hero", "tier": 3},
-      {"id": "twisted_fate", "name": "崔斯特", "type": "hero", "tier": 2},
-      {"id": "zed", "name": "瑞兹", "type": "hero", "tier": 2},
-      {"id": "spider", "name": "石甲虫", "type": "siege", "tier": 1},
-      {"id": "golem", "name": "石头人", "type": "tank", "tier": 2}
+      { "id": "ranger", "name": "游侠", "type": "ranged", "description": "弩手射速较慢，但能精准狙击大型目标并造成高额伤害。", "isHero": false },
+      { "id": "guard", "name": "卫兵", "type": "melee", "description": "握持长枪的卫兵组成的小队，擅长对抗小规模敌人。", "isHero": false },
+      { "id": "soldier", "name": "士兵", "type": "melee", "description": "前线战士，使用剑与盾，能够轻松阻拦敌人。", "isHero": false },
+      { "id": "archer", "name": "弓兵", "type": "ranged", "description": "一队弓兵，能够稳定输出高额的伤害。", "isHero": false }
     ]
   },
+  "enemies": [
+    { "id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "步兵是诺克萨斯大军中的骨干，其实力与德玛西亚卫兵相当。" },
+    { "id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "诺克萨斯战斗法师擅长从远距离投掷火球，造成范围伤害。他们依靠前排掩护作战，要想接近他们，就必须突破敌方阵线。" },
+    { "id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "龙蜥以远程单位为攻击目标，但移动速度极其缓慢。游侠的十字弩能射穿其护甲。" }
+  ],
   "enemy_compositions": [
     {
-      "id": "noxus_assault",
-      "name": "诺克萨斯突击队",
-      "threat_level": "extreme",
-      "leader": "darius",
-      "units": ["darius", "katarina", "noxus_soldier", "noxus_knight", "noxus_siege", "noxus_mage", "noxus_assassin", "noxus_soldier"],
-      "description": "以达瑞斯为首的诺克萨斯精锐，顶级物理输出与坚固防线"
+      "id": "noxian_infantry_mage",
+      "name": "诺克萨斯步兵与法师",
+      "threat_level": 4,
+      "description": "由诺克萨斯步兵与战斗法师构成的常见组合。",
+      "units": ["诺克萨斯步兵", "诺克萨斯战斗法师"]
     },
     {
-      "id": "mage_coalition",
-      "name": "魔法师联盟",
-      "threat_level": "extreme",
-      "leader": "leblanc",
-      "units": ["leblanc", "ahri", "twisted_fate", "evelynn", "spider", "spider", "golem", "lux"],
-      "description": "以勒布朗为首的魔法师集团，法术伤害灾难和隐秘刺杀"
-    },
-    {
-      "id": "shadow_assassin",
-      "name": "影谍杀手",
-      "threat_level": "extreme",
-      "leader": "evelynn",
-      "units": ["evelynn", "zed", "teemo", "katarina", "spider", "golem", "twisted_fate", "noxus_assassin"],
-      "description": "隐秘的刺杀部队，瞬间爆发与致命突袭"
-    },
-    {
-      "id": "fortified_defense",
-      "name": "防御堡垒",
-      "threat_level": "high",
-      "leader": "swain",
-      "units": ["swain", "golem", "golem", "noxus_soldier", "noxus_knight", "darius", "noxus_siege", "noxus_mage"],
-      "description": "防守型阵容，坚固的防线与持续输出"
-    },
-    {
-      "id": "elite_hunters",
-      "name": "精英猎手团",
-      "threat_level": "high",
-      "leader": "ahri",
-      "units": ["ahri", "teemo", "zed", "twisted_fate", "evelynn", "spider", "katarina", "noxus_assassin"],
-      "description": "游击战术部队，机动灵活且伤害高"
-    },
-    {
-      "id": "heavy_armor",
-      "name": "重装甲队",
-      "threat_level": "high",
-      "leader": "jarvan",
-      "units": ["jarvan", "poppy", "sylas", "garen", "demacia_soldier", "demacia_mage_unit", "noxus_knight", "golem"],
-      "description": "防御型阵容，耐久力强"
+      "id": "basilisk_assault",
+      "name": "龙蜥突袭",
+      "threat_level": 5,
+      "description": "以龙蜥为核心的后排压制阵容。",
+      "units": ["龙蜥", "诺克萨斯步兵"]
     }
-  ],
-  "enemy_units": [
-    {"id": "noxus_soldier", "name": "诺克萨斯卫兵", "type": "soldier", "threat": "low"},
-    {"id": "noxus_knight", "name": "诺克萨斯骑士", "type": "cavalry", "threat": "medium"},
-    {"id": "spider", "name": "石甲虫", "type": "siege", "threat": "medium"},
-    {"id": "golem", "name": "石头人", "type": "tank", "threat": "high"}
   ],
   "tech_tree": [
     {
       "chapter": 1,
-      "name": "初期防线",
-      "description": "游戏早期的防御与保护技术",
+      "name": "战斗科技",
+      "description": "提升部队作战能力",
       "techs": [
-        {
-          "id": "shield_mastery",
-          "name": "盾牌强化",
-          "cost": 100,
-          "effect": "+20% 护甲",
-          "description": "增强防御单位的盾甲防护，对抗早期伤害"
-        },
-        {
-          "id": "healing_totem",
-          "name": "治疗碑文",
-          "cost": 120,
-          "effect": "+15/s 生命值恢复",
-          "description": "持续恢复生命值，保持部队战力"
-        },
-        {
-          "id": "fortify",
-          "name": "要塞化",
-          "cost": 150,
-          "effect": "+25% 最大生命值",
-          "description": "增强防御建筑与单位的耐久度"
-        },
-        {
-          "id": "magic_resist",
-          "name": "魔法抗性",
-          "cost": 130,
-          "effect": "+30 魔法抗性",
-          "description": "抵抗敌方法术伤害"
-        }
+        { "id": "battlefield_expansion", "name": "战场扩增", "effect": "上场单位上限+1", "description": "战场人口上限+1，最高8个单位栏位。" }
       ]
     },
     {
       "chapter": 2,
-      "name": "中期进攻",
-      "description": "游戏中期的攻击与增强技术",
+      "name": "聚落科技",
+      "description": "聚落与建筑发展",
       "techs": [
-        {
-          "id": "blade_mastery",
-          "name": "剑术精通",
-          "cost": 250,
-          "effect": "+25% 物理伤害",
-          "description": "提升物理型单位的输出，针对敌方步兵"
-        },
-        {
-          "id": "spell_amplify",
-          "name": "法术增幅 II",
-          "cost": 280,
-          "effect": "+30% 魔法伤害",
-          "description": "增强魔法型单位的伤害，对抗法术阵容"
-        },
-        {
-          "id": "sweep_attack",
-          "name": "横扫攻击",
-          "cost": 200,
-          "effect": "群体伤害 +20%",
-          "description": "次要目标也受到伤害，提高清线效率"
-        },
-        {
-          "id": "rapid_fire",
-          "name": "快速射击",
-          "cost": 220,
-          "effect": "+40% 攻击速度",
-          "description": "提升远程单位的射击频率"
-        }
+        { "id": "settlement_slots", "name": "聚落栏位扩展", "effect": "升级聚落以解锁更多建筑栏位", "description": "1级城市3个栏位，每升一级增加一个栏位，4级满6个栏位。" }
       ]
     },
     {
       "chapter": 3,
-      "name": "后期统治",
-      "description": "游戏后期的决定性与反制技术",
+      "name": "研究与资源",
+      "description": "围绕勇气与资源的研究提升",
       "techs": [
-        {
-          "id": "immortal_will",
-          "name": "不朽之志",
-          "cost": 500,
-          "effect": "受致命伤害后复活一次",
-          "description": "获得复活机会，CD 45 秒"
-        },
-        {
-          "id": "chaos_power",
-          "name": "混沌之力",
-          "cost": 450,
-          "effect": "+50% 伤害，-15% 防御",
-          "description": "高风险高收益的强大增幅，适合进攻"
-        },
-        {
-          "id": "dimensional_shift",
-          "name": "次元转移",
-          "cost": 400,
-          "effect": "随机传送敌方单位",
-          "description": "打乱敌方阵形，制造混乱"
-        },
-        {
-          "id": "absolute_defense",
-          "name": "绝对防线",
-          "cost": 480,
-          "effect": "+60% 护甲，所有伤害 -30%",
-          "description": "终极防御技术，几乎无敌"
-        }
+        { "id": "courage_research", "name": "勇气研究", "effect": "勇气用于解锁王国与单位研究", "description": "战斗胜利、升级聚落和解决特定事件均可获得勇气。" }
       ]
     }
   ],
   "buildings": [
-    {
-      "id": "barracks",
-      "name": "军营",
-      "cost": 200,
-      "effect": "+2 单位招募速度",
-      "description": "加速招募步兵单位，提高部队数量"
-    },
-    {
-      "id": "academy",
-      "name": "学院",
-      "cost": 250,
-      "effect": "+3 科技研究速度",
-      "description": "增强科技升级速度，抢占技术优势"
-    },
-    {
-      "id": "watchtower",
-      "name": "哨塔",
-      "cost": 150,
-      "effect": "+100 视野范围",
-      "description": "扩大侦察范围，早期预警"
-    },
-    {
-      "id": "forge",
-      "name": "锻造厂",
-      "cost": 300,
-      "effect": "+20% 装备效能",
-      "description": "增强装备的效果，提升单位属性"
-    }
+    { "id": "farm", "name": "农场", "description": "食物增加5，升级后增加6。" },
+    { "id": "market", "name": "市场", "description": "相邻所有聚落产出增加5%至10%。" },
+    { "id": "foundry", "name": "煅炉", "description": "当前50金属/回合，升级后100金属/回合。" },
+    { "id": "lady_of_the_veil_altar", "name": "蒙面之女的祭坛", "description": "战斗最初5秒内，所有友方单位获得35%的减伤。" },
+    { "id": "quarry", "name": "采石场", "description": "当前100石料/回合，升级后200石料/回合。" }
   ],
-  "demacia_units": [],
-  "enemy_units_deprecated": []
+  "map_nodes": {
+    "heartland": [
+      { "id": "brook_valley", "name": "溪谷村" }
+    ],
+    "border": [
+      { "id": "terbisia", "name": "托比西亚" },
+      { "id": "dawn_fort", "name": "黎明要塞" }
+    ],
+    "mountain": [
+      { "id": "pingze", "name": "平泽镇" }
+    ]
+  }
 }

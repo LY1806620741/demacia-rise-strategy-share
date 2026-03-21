@@ -96,7 +96,7 @@ pub fn vote(id: &str, is_like: bool) {
 
 #[wasm_bindgen]
 pub fn get_strategies() -> JsValue {
-    unsafe { to_value(&STRATEGIES).unwrap() }
+    to_value(&get_strategies_snapshot()).unwrap()
 }
 
 #[wasm_bindgen]
@@ -116,8 +116,8 @@ pub async fn load_official_data() -> Result<JsValue, JsValue> {
         .map_err(|e| JsValue::from_str(&e))?;
 
     // 重建索引：用官方数据 + 现有策略
-    let strategies = unsafe { &crate::storage::STRATEGIES };
-    idx::rebuild(&data, strategies);
+    let strategies = get_strategies_snapshot();
+    idx::rebuild(&data, &strategies);
 
     Ok(serde_wasm_bindgen::to_value(&data)?)
 }
@@ -131,9 +131,9 @@ pub fn search(query: &str, limit: usize) -> JsValue {
 // 🆕 根据敌人阵容推荐防守策略
 #[wasm_bindgen]
 pub fn recommend_strategies_for_enemy(enemy_lineup: &str, limit: usize) -> JsValue {
-    let strategies = unsafe { &crate::storage::STRATEGIES };
-    let recommendations = idx::recommend_counters(enemy_lineup, strategies, limit.max(1));
-    
+    let strategies = get_strategies_snapshot();
+    let recommendations = idx::recommend_counters(enemy_lineup, &strategies, limit.max(1));
+
     let result: Vec<_> = recommendations.into_iter()
         .map(|(id, counter, similarity)| {
             serde_json::json!({

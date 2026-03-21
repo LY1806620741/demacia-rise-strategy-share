@@ -1,5 +1,6 @@
 // src/search.rs
 use crate::data_model::{OfficialDataSet, WildStrategy};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug)]
@@ -99,22 +100,7 @@ impl Inverted {
             });
         }
         for s in strategies {
-            let body = format!(
-                "{} {} {} {} {} {}",
-                s.id,
-                s.title,
-                s.description,
-                s.target_hero,
-                s.counter_lineup,
-                s.counter_tech
-            );
-            self.add_doc(Doc {
-                kind: DocKind::Strategy,
-                id: s.id.clone(),
-                title: s.title.clone(),
-                body,
-                boost: (1.0 + s.score.max(0.0) / 50.0), // 用你的评分做轻量加权
-            });
+            self.add_doc(strategy_doc(s));
         }
     }
 
@@ -123,22 +109,7 @@ impl Inverted {
         if self.meta.remove(&s.id).is_some() {
             // 从 postings & df 中移除旧项（为了简洁，此处不做“精准回收”，可在重建时清理）
         }
-        let body = format!(
-            "{} {} {} {} {} {}",
-            s.id,
-            s.title,
-            s.description,
-            s.target_hero,
-            s.counter_lineup,
-            s.counter_tech
-        );
-        self.add_doc(Doc {
-            kind: DocKind::Strategy,
-            id: s.id.clone(),
-            title: s.title.clone(),
-            body,
-            boost: (1.0 + s.score.max(0.0) / 50.0),
-        });
+        self.add_doc(strategy_doc(s));
     }
 
     pub fn search(&self, q: &str, limit: usize) -> Vec<SearchHit> {
@@ -171,7 +142,7 @@ impl Inverted {
             })
             .collect();
 
-        hits.sort_by(|a,b| b.1.partial_cmp(&a.1).unwrap());
+        hits.sort_by(|a, b| compare_rank_desc(a.1, b.1).then_with(|| a.0.cmp(&b.0)));
         hits.truncate(limit);
 
         // 构造返回
@@ -192,16 +163,59 @@ impl Inverted {
     }
 }
 
+fn strategy_doc(s: &WildStrategy) -> Doc {
+    Doc {
+        kind: DocKind::Strategy,
+        id: s.id.clone(),
+        title: s.title.clone(),
+        body: strategy_search_body(s),
+        boost: 1.0 + s.score.max(0.0) / 50.0,
+    }
+}
+
+fn strategy_search_body(s: &WildStrategy) -> String {
+    format!(
+        "{} {} {} {} {} {}",
+        s.id,
+        s.title,
+        s.description,
+        s.target_hero,
+        s.counter_lineup,
+        s.counter_tech
+    )
+}
+
+fn compare_rank_desc(a: f32, b: f32) -> Ordering {
+    b.partial_cmp(&a).unwrap_or(Ordering::Equal)
+}
+
+fn normalized_lineup_units(lineup: &str) -> HashSet<String> {
+    lineup
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_lowercase())
+        .collect()
+}
+
 fn make_snippet(src: &str, q: &str, max_len: usize) -> String {
     let s = src.replace('\n', " ");
-    if s.len() <= max_len { return s; }
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= max_len { return s; }
+
     let ql = q.to_lowercase();
-    if let Some(pos) = s.to_lowercase().find(&ql) {
+    let sl = s.to_lowercase();
+    if let Some(byte_pos) = sl.find(&ql) {
+        let pos = s[..byte_pos].chars().count();
+        let q_chars = q.chars().count();
         let start = pos.saturating_sub(20);
-        let end = (pos + q.len() + 20).min(s.len());
-        return format!("…{}…", &s[start..end]);
+        let end = (pos + q_chars + 20).min(chars.len());
+        let snippet: String = chars[start..end].iter().collect();
+        return format!("…{}…", snippet);
     }
-    format!("{}…", &s[..max_len.min(s.len())])
+
+    let snippet: String = chars[..max_len.min(chars.len())].iter().collect();
+    format!("{}…", snippet)
 }
 
 #[derive(serde::Serialize)]
@@ -235,19 +249,19 @@ pub fn query(q: &str, limit: usize) -> Vec<SearchHit> {
 }
 // 🆕 阵容相似度计算：比对两个阵容的单位组成
 pub fn calculate_lineup_similarity(lineup_a: &str, lineup_b: &str) -> f32 {
-    let units_a: HashSet<&str> = lineup_a.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
-    let units_b: HashSet<&str> = lineup_b.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
-    
+    let units_a = normalized_lineup_units(lineup_a);
+    let units_b = normalized_lineup_units(lineup_b);
+
     if units_a.is_empty() && units_b.is_empty() {
         return 1.0;
     }
     if units_a.is_empty() || units_b.is_empty() {
         return 0.0;
     }
-    
+
     let intersection = units_a.intersection(&units_b).count();
     let union = units_a.union(&units_b).count();
-    
+
     intersection as f32 / union as f32
 }
 
@@ -263,8 +277,84 @@ pub fn recommend_counters(enemy_lineup: &str, strategies: &[WildStrategy], limit
         })
         .filter(|(_, _, score)| *score > 0.0)
         .collect();
-    
-    recommendations.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+
+    recommendations.sort_by(|a, b| compare_rank_desc(a.2, b.2).then_with(|| a.0.cmp(&b.0)));
     recommendations.truncate(limit);
     recommendations
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data_model::WildStrategy;
+
+    fn strategy(id: &str, counter_lineup: &str, score: f32) -> WildStrategy {
+        WildStrategy {
+            id: id.into(),
+            title: format!("strategy-{id}"),
+            description: "desc".into(),
+            target_hero: "enemy".into(),
+            counter_lineup: counter_lineup.into(),
+            counter_tech: "tech".into(),
+            likes: 0,
+            dislikes: 0,
+            score,
+        }
+    }
+
+    #[test]
+    fn lineup_similarity_is_case_insensitive_and_deduplicated() {
+        let score = calculate_lineup_similarity("卫兵, 弓兵, 卫兵", "卫兵,弓兵");
+        assert!((score - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn lineup_similarity_handles_empty_inputs() {
+        assert!((calculate_lineup_similarity("", "") - 1.0).abs() < f32::EPSILON);
+        assert!((calculate_lineup_similarity("卫兵", "") - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recommend_counters_uses_enemy_lineup_for_matching() {
+        let strategies = vec![
+            WildStrategy {
+                id: "best".into(),
+                title: "strategy-best".into(),
+                description: "desc".into(),
+                target_hero: "诺克萨斯步兵,诺克萨斯战斗法师".into(),
+                counter_lineup: "卫兵 + 娑娜".into(),
+                counter_tech: "战场扩增".into(),
+                likes: 0,
+                dislikes: 0,
+                score: 10.0,
+            },
+            WildStrategy {
+                id: "other".into(),
+                title: "strategy-other".into(),
+                description: "desc".into(),
+                target_hero: "龙蜥".into(),
+                counter_lineup: "游侠".into(),
+                counter_tech: "战场扩增".into(),
+                likes: 0,
+                dislikes: 0,
+                score: 10.0,
+            },
+        ];
+
+        let hits = recommend_counters("诺克萨斯步兵, 诺克萨斯战斗法师", &strategies, 2);
+        assert_eq!(hits.first().map(|hit| hit.0.as_str()), Some("best"));
+    }
+
+    #[test]
+    fn recommend_counters_returns_counter_lineup() {
+        let strategies = vec![strategy("best", "卫兵,弓兵", 10.0)];
+        let hits = recommend_counters("enemy", &strategies, 1);
+        assert_eq!(hits.first().map(|hit| hit.1.as_str()), Some("卫兵,弓兵"));
+    }
+
+    #[test]
+    fn make_snippet_handles_multibyte_queries() {
+        let snippet = make_snippet("前排卫兵 后排弓兵 侧翼骑兵", "弓兵", 8);
+        assert!(snippet.contains("弓兵"));
+    }
 }
