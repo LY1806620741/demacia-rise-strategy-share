@@ -1,19 +1,35 @@
 {
   "heroes": [
-    { "id": "sona", "name": "娑娜", "type": "ranged", "description": "琴瑟仙女娑娜能造成远程伤害，并能提升其他远程部队的攻击力。" }
+    { "id": "sona", "name": "娑娜", "type": "ranged", "description": "琴瑟仙女娑娜能造成远程伤害，并能提升其他远程部队的攻击力。" },
+    { "id": "garen", "name": "盖伦", "type": "melee", "description": "德玛西亚之力盖伦是坚韧的前线英雄，能同时压制多个敌人并承受大量伤害。" },
+    { "id": "jarvan_iv", "name": "嘉文四世", "type": "melee", "description": "德玛西亚皇子嘉文四世可鼓舞附近友军，提升近战单位的攻击力与护甲。" },
+    { "id": "kayle", "name": "凯尔", "type": "hybrid", "description": "飞翼保护神凯尔兼具近程与远程输出能力，能在战斗中不断增强攻速与射程。" },
+    { "id": "poppy", "name": "波比", "type": "melee", "description": "圣锤之毅波比是擅长控制与承伤的前线英雄，可将面前敌人击晕。" },
+    { "id": "galio", "name": "加里奥", "type": "melee", "description": "正义巨像加里奥是重型防御英雄，擅长范围压制并减少自身受到的伤害。" },
+    { "id": "morgana", "name": "莫甘娜", "type": "ranged", "description": "蒙面之女莫甘娜能在敌方区域制造持续伤害，同时提供强力的法术压制。" },
+    { "id": "quinn", "name": "奎因", "type": "ranged", "description": "德玛西亚之翼奎因擅长优先打击敌方远程单位，并通过华洛造成高额爆发伤害。" }
   ],
   "units": {
     "demacia": [
       { "id": "ranger", "name": "游侠", "type": "ranged", "description": "弩手射速较慢，但能精准狙击大型目标并造成高额伤害。", "isHero": false },
       { "id": "guard", "name": "卫兵", "type": "melee", "description": "握持长枪的卫兵组成的小队，擅长对抗小规模敌人。", "isHero": false },
       { "id": "soldier", "name": "士兵", "type": "melee", "description": "前线战士，使用剑与盾，能够轻松阻拦敌人。", "isHero": false },
-      { "id": "archer", "name": "弓兵", "type": "ranged", "description": "一队弓兵，能够稳定输出高额的伤害。", "isHero": false }
+      { "id": "archer", "name": "弓兵", "type": "ranged", "description": "一队弓兵，能够稳定输出高额的伤害。", "isHero": false },
+      { "id": "vanguard", "name": "无畏先锋", "type": "melee", "description": "士兵的精锐升级形态，具备更高的伤害与生存能力。", "isHero": false },
+      { "id": "dragonguard_knight", "name": "龙禽骑士", "type": "ranged", "description": "能俯冲攻击敌人并造成高额伤害的特殊精锐单位。", "isHero": false }
     ]
   },
   "enemies": [
     { "id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "步兵是诺克萨斯大军中的骨干，其实力与德玛西亚卫兵相当。" },
     { "id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "诺克萨斯战斗法师擅长从远距离投掷火球，造成范围伤害。他们依靠前排掩护作战，要想接近他们，就必须突破敌方阵线。" },
-    { "id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "龙蜥以远程单位为攻击目标，但移动速度极其缓慢。游侠的十字弩能射穿其护甲。" }
+    { "id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "龙蜥以远程单位为攻击目标，但移动速度极其缓慢。游侠的十字弩能射穿其护甲。" },
+    { "id": "noxian_drakehound", "name": "诺克萨斯龙犬", "type": "melee", "category": "noxus", "description": "训练有素的诺克萨斯龙犬速度极快，能够闪避部分远程攻击并直扑后排。" },
+    { "id": "noxian_mauler", "name": "诺克萨斯重击兵", "type": "melee", "category": "noxus", "description": "诺克萨斯重击兵装备重甲，生命值降至一半后会进入狂暴状态，大幅提升攻击速度。" },
+    { "id": "tribal_warrior", "name": "部落战士", "type": "melee", "category": "wild", "description": "部落战士会优先突袭远程单位，适合通过厚实前排或控制手段限制。" },
+    { "id": "troll", "name": "巨魔", "type": "ranged", "category": "wild", "description": "巨魔会掷出飞斧，对单体目标造成高额远程伤害。" },
+    { "id": "yeti", "name": "雪人", "type": "ranged", "category": "wild", "description": "雪人会投掷巨石，对范围内单位造成高额范围伤害。" },
+    { "id": "krug", "name": "石甲虫", "type": "melee", "category": "wild", "description": "石甲虫对近战伤害有明显减免，更适合用远程单位处理。" },
+    { "id": "drakehound", "name": "龙犬", "type": "melee", "category": "wild", "description": "龙犬常成群出没，突进迅猛，擅长快速撕开薄弱阵线。" }
   ],
   "enemy_compositions": [
     {
@@ -29,6 +45,41 @@
       "threat_level": 5,
       "description": "以龙蜥为核心的后排压制阵容。",
       "units": ["龙蜥", "诺克萨斯步兵"]
+    },
+    {
+      "id": "hound_breach",
+      "name": "龙犬突破",
+      "threat_level": 4,
+      "description": "诺克萨斯龙犬与步兵配合，用高速突袭撕开阵型。",
+      "units": ["诺克萨斯龙犬", "诺克萨斯步兵"]
+    },
+    {
+      "id": "mauler_battlemage_push",
+      "name": "重击兵法师推进",
+      "threat_level": 5,
+      "description": "以诺克萨斯重击兵顶前，战斗法师持续输出的高压阵容。",
+      "units": ["诺克萨斯重击兵", "诺克萨斯战斗法师"]
+    },
+    {
+      "id": "wild_raiders",
+      "name": "荒野掠袭",
+      "threat_level": 3,
+      "description": "由部落战士与龙犬组成的快速切后排组合。",
+      "units": ["部落战士", "龙犬"]
+    },
+    {
+      "id": "stone_and_snow",
+      "name": "石甲雪人阵",
+      "threat_level": 4,
+      "description": "石甲虫吸收前排压力，雪人在后排制造范围伤害。",
+      "units": ["石甲虫", "雪人"]
+    },
+    {
+      "id": "troll_basilisk_hunt",
+      "name": "巨魔龙蜥狩猎",
+      "threat_level": 5,
+      "description": "巨魔的远程点杀与龙蜥的后排压制相结合，威胁高价值远程单位。",
+      "units": ["巨魔", "龙蜥"]
     }
   ],
   "tech_tree": [
@@ -37,7 +88,10 @@
       "name": "战斗科技",
       "description": "提升部队作战能力",
       "techs": [
-        { "id": "battlefield_expansion", "name": "战场扩增", "effect": "上场单位上限+1", "description": "战场人口上限+1，最高8个单位栏位。" }
+        { "id": "battlefield_expansion", "name": "战场扩增", "effect": "上场单位上限+1", "description": "战场人口上限+1，最高8个单位栏位。" },
+        { "id": "shield_bash", "name": "护盾猛击", "effect": "士兵攻击附带短暂眩晕", "description": "士兵每次攻击都会短暂打断敌人，为前排争取更多生存空间。" },
+        { "id": "multi_shot", "name": "多重射击", "effect": "弓兵可额外射击一个目标", "description": "提升弓兵的清场能力，适合处理中小体型敌群。" },
+        { "id": "armor_piercing", "name": "破甲技术", "effect": "远程单位对重甲目标伤害提高", "description": "弩箭与重型箭矢改良后，可更有效压制重甲敌人与大型单位。" }
       ]
     },
     {
@@ -45,7 +99,9 @@
       "name": "聚落科技",
       "description": "聚落与建筑发展",
       "techs": [
-        { "id": "settlement_slots", "name": "聚落栏位扩展", "effect": "升级聚落以解锁更多建筑栏位", "description": "1级城市3个栏位，每升一级增加一个栏位，4级满6个栏位。" }
+        { "id": "settlement_slots", "name": "聚落栏位扩展", "effect": "升级聚落以解锁更多建筑栏位", "description": "1级城市3个栏位，每升一级增加一个栏位，4级满6个栏位。" },
+        { "id": "efficient_builders", "name": "高效工匠", "effect": "建筑建造时间减少", "description": "通过工匠组织和施工优化，缩短关键建筑的成型时间。" },
+        { "id": "market_network", "name": "商路网络", "effect": "相邻聚落资源产出提升", "description": "建立稳定贸易路线，提高周边聚落之间的资源转移效率。" }
       ]
     },
     {
@@ -53,7 +109,9 @@
       "name": "研究与资源",
       "description": "围绕勇气与资源的研究提升",
       "techs": [
-        { "id": "courage_research", "name": "勇气研究", "effect": "勇气用于解锁王国与单位研究", "description": "战斗胜利、升级聚落和解决特定事件均可获得勇气。" }
+        { "id": "courage_research", "name": "勇气研究", "effect": "勇气用于解锁王国与单位研究", "description": "战斗胜利、升级聚落和解决特定事件均可获得勇气。" },
+        { "id": "heartland_specialization", "name": "腹地专精", "effect": "腹地聚落农业产出提升", "description": "优化腹地聚落的农场布局，使粮食产能更加稳定。" },
+        { "id": "mountain_specialization", "name": "山区专精", "effect": "山区采石场与煅炉成本下降", "description": "针对山区环境优化建造与运输方案，降低关键资源建筑的建设压力。" }
       ]
     }
   ],
@@ -62,18 +120,35 @@
     { "id": "market", "name": "市场", "description": "相邻所有聚落产出增加5%至10%。" },
     { "id": "foundry", "name": "煅炉", "description": "当前50金属/回合，升级后100金属/回合。" },
     { "id": "lady_of_the_veil_altar", "name": "蒙面之女的祭坛", "description": "战斗最初5秒内，所有友方单位获得35%的减伤。" },
-    { "id": "quarry", "name": "采石场", "description": "当前100石料/回合，升级后200石料/回合。" }
+    { "id": "quarry", "name": "采石场", "description": "当前100石料/回合，升级后200石料/回合。" },
+    { "id": "lumberyard", "name": "伐木场", "description": "稳定产出木材，是中前期建设与训练单位的重要基础建筑。" },
+    { "id": "barracks", "name": "兵营", "description": "用于训练卫兵、士兵与其他基础作战单位，可进一步升级扩展训练能力。" },
+    { "id": "anti_magic_workshop", "name": "禁魔石工场", "description": "每回合产出禁魔石，并降低部分研究成本，是高阶科技的重要基础设施。" },
+    { "id": "watchtower", "name": "瞭望塔", "description": "延缓敌方威胁抵达周边聚落的时间，为防守争取更多准备空间。" },
+    { "id": "militia_headquarters", "name": "民兵团总部", "description": "在聚落发生战斗时提供额外守军支援，增强本地防御能力。" },
+    { "id": "royal_armory", "name": "皇家军械库", "description": "提升战斗胜利后的勇气与资源收益，适合中后期战役推进。" },
+    { "id": "valorie_roost", "name": "锋喙鸟舍", "description": "为附近战斗提供龙禽骑士支援，是高阶区域防御与突袭的重要建筑。" }
   ],
   "map_nodes": {
     "heartland": [
-      { "id": "brook_valley", "name": "溪谷村" }
+      { "id": "brook_valley", "name": "溪谷村" },
+      { "id": "viscaria", "name": "维斯卡锡亚" },
+      { "id": "tilbourne", "name": "提尔波恩" },
+      { "id": "jandelle", "name": "詹戴尔" }
     ],
     "border": [
       { "id": "terbisia", "name": "托比西亚" },
-      { "id": "dawn_fort", "name": "黎明要塞" }
+      { "id": "dawn_fort", "name": "黎明要塞" },
+      { "id": "cloudfield", "name": "云田" },
+      { "id": "fossbarrow", "name": "福斯拜罗" },
+      { "id": "graygate", "name": "灰门" }
     ],
     "mountain": [
-      { "id": "pingze", "name": "平泽镇" }
+      { "id": "pingze", "name": "平泽镇" },
+      { "id": "high_silvermere", "name": "密银城" },
+      { "id": "uwendale", "name": "厄文戴尔" },
+      { "id": "pinara", "name": "皮纳拉" },
+      { "id": "eaglestone", "name": "鹰石镇" }
     ]
   }
 }
