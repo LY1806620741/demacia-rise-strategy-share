@@ -16,24 +16,48 @@ function normalizeLineupToken(token) {
     .trim();
 }
 
-function normalizedLineupUnits(lineup) {
-  return new Set(
-    String(lineup || '')
-      .split(/[，,；;\n\t|/]/)
-      .flatMap(segment => segment.split(/[+＋]/))
-      .map(normalizeLineupToken)
-      .filter(Boolean)
-  );
+function parseLineupCount(token) {
+  const normalized = String(token || '').trim().toLowerCase();
+  const explicit = normalized.match(/(?:^|\s|[+＋,，;；|/])(?:x|×|\*)\s*(\d+)$/i)
+    || normalized.match(/(?:x|×|\*)\s*(\d+)$/i)
+    || normalized.match(/\s+(\d+)$/i);
+  return Math.max(1, Number(explicit?.[1] || 1));
+}
+
+function normalizedLineupCounts(lineup) {
+  const counts = new Map();
+  String(lineup || '')
+    .split(/[，,；;\n\t|/]/)
+    .flatMap(segment => segment.split(/[+＋]/))
+    .map(chunk => chunk.trim())
+    .filter(Boolean)
+    .forEach(chunk => {
+      const key = normalizeLineupToken(chunk);
+      if (!key) return;
+      const count = parseLineupCount(chunk);
+      counts.set(key, (counts.get(key) || 0) + count);
+    });
+  return counts;
 }
 
 function calculateLineupSimilarity(lineupA, lineupB) {
-  const unitsA = normalizedLineupUnits(lineupA);
-  const unitsB = normalizedLineupUnits(lineupB);
-  if (!unitsA.size && !unitsB.size) return 1;
-  if (!unitsA.size || !unitsB.size) return 0;
-  const intersection = [...unitsA].filter(unit => unitsB.has(unit)).length;
-  const union = new Set([...unitsA, ...unitsB]).size;
-  return union ? intersection / union : 0;
+  const countsA = normalizedLineupCounts(lineupA);
+  const countsB = normalizedLineupCounts(lineupB);
+  if (!countsA.size && !countsB.size) return 1;
+  if (!countsA.size || !countsB.size) return 0;
+
+  const allKeys = new Set([...countsA.keys(), ...countsB.keys()]);
+  let overlap = 0;
+  let total = 0;
+
+  allKeys.forEach(key => {
+    const a = countsA.get(key) || 0;
+    const b = countsB.get(key) || 0;
+    overlap += Math.min(a, b);
+    total += Math.max(a, b);
+  });
+
+  return total ? overlap / total : 0;
 }
 
 function findOfficialRecommendationsByEnemyLineup(query) {
@@ -46,9 +70,15 @@ function findOfficialRecommendationsByEnemyLineup(query) {
   ).filter(item => item.similarity > 0).sort((a, b) => b.similarity - a.similarity);
 }
 
-const hits = findOfficialRecommendationsByEnemyLineup('雪人 x2, 部落战士 x15, 巨魔 x2');
-assert.ok(hits.length > 0, '应命中至少一个官方防守推荐');
-assert.equal(hits[0].town, '鹰石镇', '应优先命中鹰石镇官方防守推荐');
-assert.ok(hits[0].similarity >= 0.99, '单位集合完全一致时，相似度应接近 1');
+const exactHits = findOfficialRecommendationsByEnemyLineup('雪人 x2, 部落战士 x15, 巨魔 x3');
+assert.ok(exactHits.length > 0, '精确数量应命中至少一个官方防守推荐');
+assert.equal(exactHits[0].town, '鹰石镇', '精确数量应优先命中鹰石镇');
+assert.ok(exactHits[0].similarity >= 0.99, '精确数量匹配时，相似度应接近 1');
+
+const nearHits = findOfficialRecommendationsByEnemyLineup('雪人 x2, 部落战士 x15, 巨魔 x2');
+assert.ok(nearHits.length > 0, '数量略有差异时仍应命中官方防守推荐');
+assert.equal(nearHits[0].town, '鹰石镇', '数量略有差异时仍应优先命中鹰石镇');
+assert.ok(nearHits[0].similarity < exactHits[0].similarity, '数量不完全一致时，相似度应低于精确匹配');
+assert.ok(nearHits[0].similarity > 0.8, '数量接近时仍应保持较高匹配度');
 
 console.log('official-lineup-search: ok');

@@ -62,9 +62,7 @@
                         <div style="display:grid;gap:1rem;">
                             <div class="enemy-config-panel" style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
                                 <h4 style="margin-top:0;">敌人阵容</h4>
-                                <label for="enemy-unit-search">搜索敌人单位</label>
-                                <input id="enemy-unit-search" type="text" placeholder="输入名称 / ID 快速查找" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 4px;">
-                                <!-- 🆕 快速筛选按钮 -->
+                                <div class="muted" style="margin-bottom:.5rem;">优先直接输入敌人阵容，例如：雪人 x2，部落战士 x15，巨魔 x2。下方单位列表可用于点击补充或拖拽辅助。</div>
                                 <div id="enemy-unit-filters" style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <button class="filter-btn active" data-filter="all">全部</button>
                                     <button class="filter-btn" data-filter="hero">英雄</button>
@@ -76,8 +74,8 @@
                                     <div class="muted">正在加载敌人单位...</div>
                                 </div>
                                 <div style="margin-top: 1rem;">
-                                    <label for="enemy-lineup-text-input">敌人阵容文本</label>
-                                    <input id="enemy-lineup-text-input" type="text" placeholder="例如: 诺克萨斯步兵 x2，诺克萨斯战斗法师 x1" style="width: 100%; margin-top: .5rem; padding: 0.5rem; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px;">
+                                    <label for="enemy-lineup-text-input">敌人阵容文本（主输入）</label>
+                                    <input id="enemy-lineup-text-input" type="text" placeholder="例如: 雪人 x2，部落战士 x15，巨魔 x2" style="width: 100%; margin-top: .5rem; padding: 0.5rem; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px;">
                                 </div>
                             </div>
 

@@ -99,18 +99,12 @@ export function renderEnemyUnitList(filter = '', typeFilter = 'all') {
 
 export function setupEnemyUnitPicker() {
   renderEnemyUnitList();
-  const searchInput = byId('enemy-unit-search');
-  if (!searchInput) return;
-  searchInput.addEventListener('input', () => {
-    const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
-    renderEnemyUnitList(searchInput.value, activeFilter);
-  });
 
   document.querySelectorAll('.filter-btn').forEach(button => {
     button.addEventListener('click', () => {
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
-      renderEnemyUnitList(searchInput.value, button.dataset.filter);
+      renderEnemyUnitList('', button.dataset.filter);
     });
   });
 }
