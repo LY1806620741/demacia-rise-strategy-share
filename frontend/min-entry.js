@@ -1,7 +1,7 @@
 import { state, NODE_TTL } from './state.js';
 import { byId, wasmArray, debounce, escapeHtml, highlight, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
-import { getAllEnemyUnits, getAllTechOptions, getBuildings, getHeroes, getOfficialLineups } from './data.js';
+import { getAllEnemyUnits, getAllTechOptions, getBuildings, getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
 import init, { create_strategy, create_p2p_node, get_strategies, load_official_data, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
 
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -114,15 +114,48 @@ function updateDashboard() {
 function renderOfficialLineups() {
   const container = byId('official-recommendations-container');
   if (!container) return;
-  const compositions = getOfficialLineups();
+  const townRecommendations = getResolvedTownDefenseRecommendations();
+  const fallbackCompositions = getOfficialLineups();
   const techs = getAllTechOptions();
 
-  if (!compositions.length) {
+  if (townRecommendations.length) {
+    container.innerHTML = townRecommendations.map(entry => `
+      <div style="background:#171717;border:1px solid #333;border-radius:12px;padding:1rem;display:grid;gap:.85rem;">
+        <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;">
+          <div>
+            <h4 style="margin:0;color:#ffd54f;">${escapeHtml(entry.town.name)}</h4>
+            <div class="muted" style="margin-top:.2rem;">地区：${escapeHtml(entry.town.region || entry.region || '未知')}</div>
+          </div>
+          <span class="muted">${entry.waves.length} 个来袭波次</span>
+        </div>
+        <div class="muted">${escapeHtml(entry.notes || '暂无额外说明')}</div>
+        ${entry.waves.map(wave => {
+          const incomingEnemyText = wave.incoming_enemy_text || (wave.incomingEnemies.length ? wave.incomingEnemies.map(enemy => enemy.name).join('、') : '未配置');
+          const lineupText = wave.recommended_lineup_text || (wave.recommendedLineup.length ? wave.recommendedLineup.map(unit => unit.name).join('、') : '未配置');
+          const techText = wave.recommendedTechs.length ? wave.recommendedTechs.map(tech => tech.name).join('、') : '未配置';
+          return `
+          <div style="border:1px solid #2f2f2f;border-radius:10px;padding:.9rem;background:#111;display:grid;gap:.45rem;">
+            <strong style="color:#9fd3ff;">${escapeHtml(wave.label || wave.wave_id || '来袭波次')}</strong>
+            <div><strong>来袭敌人：</strong>${escapeHtml(incomingEnemyText)}</div>
+            <div><strong>推荐阵容：</strong>${escapeHtml(lineupText)}</div>
+            <div><strong>推荐科技：</strong>${escapeHtml(techText)}</div>
+            ${wave.required_tech_text ? `<div><strong>必需研究：</strong>${escapeHtml(wave.required_tech_text)}</div>` : ''}
+            ${wave.optional_tech_text ? `<div><strong>可选研究：</strong>${escapeHtml(wave.optional_tech_text)}</div>` : ''}
+            ${wave.tactic ? `<div class="muted"><strong>诀窍：</strong>${escapeHtml(wave.tactic)}</div>` : ''}
+          </div>
+        `;
+        }).join('')}
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (!fallbackCompositions.length) {
     container.innerHTML = '<div class="muted">暂无官方阵容数据</div>';
     return;
   }
 
-  container.innerHTML = compositions.map((comp, index) => {
+  container.innerHTML = fallbackCompositions.map((comp, index) => {
     const tech = techs[index % Math.max(techs.length, 1)];
     const suggestedCounter = getDefenseUnitPool().slice(index % 3, (index % 3) + 3).map(unit => unit.name).join('、') || '卫兵、游侠';
     return `

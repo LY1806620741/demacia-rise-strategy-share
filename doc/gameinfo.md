@@ -587,6 +587,17 @@ https://developer.riotgames.com/docs/lol
 https://ddragon.leagueoflegends.com/api/versions.json
 https://ddragon.leagueoflegends.com/cdn/16.6.1/data/zh_CN/champion.json
 
+# 阵容推荐
+
+1. 鹰石镇
+敌方阵营:雪人*2,部落展示*15,巨魔*3
+阵容: 天使,士兵,盖伦,莫甘娜,加里奥,士兵,士兵
+研究: 需要首都4级前所有战斗研究,战场扩增,盖伦.可选精锐盖伦,精锐加里奥,战斗领导术
+诀窍: 前排扛住,莫甘娜输出
+
+2. 第四章敌袭击
+诺厄萨斯步兵*9,诺克萨斯战斗法师*7,龙蜥*1
+
 # 资源文件
 
 语音: 英雄联盟\LeagueClient\Plugins\rcp-fe-lol-navigation\assets.wad\File3679.ogg File3697.ogg File0263.ogg中文
