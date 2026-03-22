@@ -43,31 +43,27 @@
             </div>
         </div>
 
-        <!-- 🆕 官方推荐面板 -->
-        <div class="section official-recommendations">
-            <h2>⭐ 官方推荐方案</h2>
-            <div id="official-recommendations-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-                <div class="muted">加载官方数据...</div>
-            </div>
-        </div>
-
         <!-- 🆕 分页标签卡 -->
         <div class="section tabs">
-            <div class="tabs-header">
+            <div class="tabs-header" style="display:flex;gap:.5rem;flex-wrap:wrap;">
                 <button class="tab-button active" onclick="switchTab('battle-strategy')">⚔️ 战斗策略编辑</button>
-                <button class="tab-button" onclick="switchTab('map-strategy')">🗺️ 地图策略页面</button>
+                <button class="tab-button" onclick="switchTab('official-lineups')">⭐ 官方阵容数据</button>
+                <button class="tab-button" onclick="switchTab('community-lineups')">🧾 社区阵容数据</button>
                 <button class="tab-button" onclick="switchTab('fulltext-search')">🔎 本地全文检索</button>
+                <button class="tab-button" onclick="switchTab('map-strategy')">🗺️ 地图策略页面</button>
             </div>
 
             <!-- 战斗策略编辑页面 -->
             <div id="battle-strategy" class="tab-content active">
                 <div class="section">
-                    <h3>第一步：配置敌人阵容 👹</h3>
-                    <div class="enemy-config-panel">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div>
+                    <h3>战斗策略编辑台</h3>
+                    <div class="muted" style="margin-bottom: 1rem;">先配置敌人阵容，系统会立即搜索社区方案；如果已有方案不满足，再继续补充应对阵容、科技和描述。</div>
+                    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:1rem;align-items:start;">
+                        <div style="display:grid;gap:1rem;">
+                            <div class="enemy-config-panel" style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                                <h4 style="margin-top:0;">敌人阵容</h4>
                                 <label for="enemy-unit-search">搜索敌人单位</label>
-                                <input id="enemy-unit-search" type="text" placeholder="输入名称/ID快速查找" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 4px;">
+                                <input id="enemy-unit-search" type="text" placeholder="输入名称 / ID 快速查找" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 4px;">
                                 <!-- 🆕 快速筛选按钮 -->
                                 <div id="enemy-unit-filters" style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <button class="filter-btn active" data-filter="all">全部</button>
@@ -76,92 +72,115 @@
                                     <button class="filter-btn" data-filter="wild">野怪</button>
                                     <button class="filter-btn" data-filter="noxus">诺克萨斯</button>
                                 </div>
-                                <div id="enemy-unit-list" style="max-height: 260px; overflow-y: auto; border: 1px solid #444; background: #121212; border-radius: 4px; padding: 0.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.5rem;">
+                                <div id="enemy-unit-list" style="max-height: 240px; overflow-y: auto; border: 1px solid #444; background: #121212; border-radius: 4px; padding: 0.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.5rem;">
                                     <div class="muted">正在加载敌人单位...</div>
                                 </div>
-                            </div>
-                            <div>
-                                <label for="enemy-units-editor">敌人数量编辑</label>
-                                <div id="enemy-units-editor" style="border: 1px solid #444; padding: 0.5rem; min-height: 100px; background: #1a1a1a; border-radius: 4px;">
-                                    <div class="muted">敌人配队将显示在这里</div>
+                                <div style="margin-top: 1rem;">
+                                    <label for="enemy-lineup-text-input">敌人阵容文本</label>
+                                    <input id="enemy-lineup-text-input" type="text" placeholder="例如: 诺克萨斯步兵 x2，诺克萨斯战斗法师 x1" style="width: 100%; margin-top: .5rem; padding: 0.5rem; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px;">
                                 </div>
+                            </div>
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                                <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                                    <h4 style="margin-top:0;">敌人阵容编辑结果</h4>
+                                    <div id="enemy-units-editor" style="border: 1px solid #444; padding: 0.5rem; min-height: 120px; background: #1a1a1a; border-radius: 4px;">
+                                        <div class="muted">敌人配队将显示在这里</div>
+                                    </div>
+                                </div>
+                                <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                                    <h4 style="margin-top:0;">敌人阵容摘要</h4>
+                                    <div id="enemy-lineup-editor" style="border: 1px dashed #555; padding: 1rem; border-radius: 8px; min-height: 120px; background: #1a1a1a;">
+                                        <div id="enemy-lineup-dropzone" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 50px;">
+                                            <div class="muted">将单位拖拽至此，或在上方输入框编辑</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;gap:1rem;">
+                            <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                                <h4 style="margin-top:0;">社区相似策略</h4>
+                                <button onclick="searchByEnemyLineup()" style="margin-bottom:.75rem;width:100%;">🔍 搜索相似策略</button>
+                                <div id="similarity-recommendations">
+                                    <div class="muted">先输入或选择敌人阵容，系统会优先推荐已有社区方案。</div>
+                                </div>
+                            </div>
+
+                            <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                                <h4 style="margin-top:0;">编辑提示</h4>
+                                <ul style="color:#bdbdbd;margin:0 0 0 1.25rem;padding:0;display:grid;gap:.45rem;">
+                                    <li>先看社区已有方案，再决定是否补充新方案。</li>
+                                    <li>科技会直接读取 `config.json` 中的 `tech_tree`。</li>
+                                    <li>发布时重点记录敌人阵容、应对阵容与策略描述。</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="section">
-                    <h3>第二步：先搜索现有策略 🔍</h3>
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-                        <div>
-                            <label for="enemy-lineup-text-input">敌人阵容（可直接输入，也会自动同步上方编辑结果）</label>
-                            <div id="enemy-lineup-editor" style="border: 1px dashed #555; padding: 1rem; border-radius: 8px; min-height: 100px; background: #1a1a1a; margin-bottom: 1rem;">
-                                <div id="enemy-lineup-dropzone" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 50px;">
-                                    <div class="muted">将单位拖拽至此，或在下方输入框编辑</div>
-                                </div>
-                                <input id="enemy-lineup-text-input" type="text" placeholder="例如: 诺克萨斯步兵 x2，诺克萨斯战斗法师 x1" style="width: 100%; margin-top: 1rem; padding: 0.5rem; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px;">
+                    <h3>应对阵容与科技</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                            <h4 style="margin-top:0;">可用防守单位</h4>
+                            <div id="counter-units-available" style="border: 1px solid #444; padding: 0.5rem; min-height: 120px; background: #1a1a1a; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <div class="muted">单位列表加载中...</div>
                             </div>
-                            <button onclick="searchByEnemyLineup()" style="margin-top: 0.5rem; width: 100%;">🔍 先搜索相似策略</button>
+                            <div class="muted" style="margin-top:.5rem;">支持点击添加，也支持拖拽到右侧。</div>
                         </div>
-                    </div>
-                    <div id="similarity-recommendations" style="margin-top: 1.5rem;">
-                        <div class="muted">先输入或选择敌人阵容，系统会优先推荐已有社区方案；如果没有，再继续补充你的方案。</div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>第三步：配置应对阵容 🛡️</h3>
-                    <div class="counter-config-panel">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div>
-                                <label for="counter-units-available">可用防守单位（拖拽选择）</label>
-                                <div id="counter-units-available" style="border: 1px solid #444; padding: 0.5rem; min-height: 100px; background: #1a1a1a; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                    <div class="muted">单位列表加载中...</div>
-                                </div>
-                            </div>
-                            <div>
-                                <label for="counter-units-selected">已选应对单位</label>
-                                <div id="counter-units-selected" style="border: 1px solid #444; padding: 0.5rem; min-height: 100px; background: #1a1a1a; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                    <div class="muted">拖拽单位到这里</div>
-                                </div>
+                        <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
+                            <h4 style="margin-top:0;">已选应对单位</h4>
+                            <div id="counter-units-selected" style="border: 1px solid #444; padding: 0.5rem; min-height: 120px; background: #1a1a1a; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <div class="muted">拖拽单位到这里</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="section form-box">
-                    <h3>第四步：补充你的战术说明并发布 📡</h3>
+                    <h3>策略描述与发布</h3>
                     <label for="battle-strategy-desc">策略描述</label>
-                    <textarea id="battle-strategy-desc" placeholder="如果搜索结果不合适，可以在这里补充你的战术思路、站位、优先级、科技搭配... "></textarea>
-                    <div style="margin: 1rem 0; text-align: left;">
-                        <label for="battle-tech-search">科技选择（可搜索、多选）</label>
-                        <input id="battle-tech-search" type="text" placeholder="搜索科技名称、效果或章节" style="margin-top: 0.5rem;" />
-                        <div id="battle-strategy-tech-summary" class="muted" style="margin: 0.5rem 0;">未选择科技，将默认记为“未选择科技”</div>
-                        <div id="battle-strategy-tech-list" style="max-height: 220px; overflow-y: auto; border: 1px solid #444; border-radius: 6px; padding: 0.75rem; background: #111;"></div>
+                    <textarea id="battle-strategy-desc" placeholder="补充你的战术思路、站位、目标优先级、科技搭配与使用时机..."></textarea>
+                    <div style="margin: 1rem 0; text-align: left; display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;">
+                        <div>
+                            <label for="battle-tech-search">科技选择（读取配置）</label>
+                            <input id="battle-tech-search" type="text" placeholder="搜索科技名称、效果或章节" style="margin-top: 0.5rem;" />
+                            <div id="battle-strategy-tech-summary" class="muted" style="margin: 0.5rem 0;">未选择科技，将默认记为“未选择科技”</div>
+                        </div>
+                        <div class="muted" style="padding-top:1.75rem;">科技选项来自 `config.json > tech_tree`，当前页面不再写死任何科技内容。</div>
                     </div>
-                    <div class="muted" style="margin-bottom: 0.75rem; text-align: left;">现在不需要单独标题，描述会作为社区策略的主要展示内容。</div>
-                    <button onclick="submitBattleStrategy()">发布战斗策略到德玛西亚网络</button>
+                    <div id="battle-strategy-tech-list" style="max-height: 260px; overflow-y: auto; border: 1px solid #444; border-radius: 6px; padding: 0.75rem; background: #111;"></div>
+                    <button onclick="submitBattleStrategy()" style="margin-top:1rem;">发布战斗策略到德玛西亚网络</button>
                 </div>
             </div>
 
-            <!-- 地图策略页面 -->
-            <div id="map-strategy" class="tab-content">
+            <!-- 官方阵容数据页面 -->
+            <div id="official-lineups" class="tab-content">
                 <div class="section">
-                    <h3>地图资源规划 🗺️</h3>
-                    <p>该秘籍面板将展示地图相关的策略建议，包括：</p>
-                    <ul style="color: #aaa; margin-left: 1.5rem;">
-                        <li>最优建筑布局建议</li>
-                        <li>资源收集最优路线</li>
-                        <li>地区夺取优先级</li>
-                        <li>科技研究路径规划</li>
-                    </ul>
-                    <div id="map-strategies-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
-                        <div class="muted">加载地图策略...</div>
+                    <h2>⭐ 官方阵容数据浏览</h2>
+                    <div class="muted" style="margin-bottom: 1rem;">浏览 `config.json` 中的官方敌方组合、推荐科技和基础说明。</div>
+                    <div id="official-recommendations-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+                        <div class="muted">加载官方阵容数据...</div>
                     </div>
+                </div>
+                <div class="section">
+                    <h3>官方英雄数据 🌍</h3>
+                    <div id="hero-list"></div>
                 </div>
             </div>
 
-            <!-- 本地全文检索 -->
+            <!-- 社区阵容数据页面 -->
+            <div id="community-lineups" class="tab-content">
+                <div class="section">
+                    <h2>🧾 社区阵容数据浏览</h2>
+                    <div class="muted" style="margin-bottom: 1rem;">查看当前同步到本地的社区策略，重点浏览敌人阵容、应对阵容和科技搭配。</div>
+                    <div id="strategy-list"></div>
+                </div>
+            </div>
+
+            <!-- 本地全文检索页面 -->
             <div id="fulltext-search" class="tab-content">
                 <div class="section">
                     <h2>🔎 本地全文检索</h2>
@@ -179,22 +198,29 @@
                             </select>
                         </div>
                     </div>
-                    <div class="muted" style="margin-bottom: 0.75rem;">敌人阵容搜索已合并到战斗策略编辑页，支持先搜索相似方案，再补充并发布你的方案。</div>
+                    <div class="muted" style="margin-bottom: 0.75rem;">敌人阵容搜索已合并到战斗策略编辑页。本页用于全文关键词检索。</div>
                     <div id="search-results" class="search-results">
                         <div class="muted">请输入关键词进行检索</div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="section">
-            <h2>官方英雄数据 🌍</h2>
-            <div id="hero-list"></div>
-        </div>
-
-        <div class="section">
-            <h2>野生策略库 🧾</h2>
-            <div id="strategy-list"></div>
+            <!-- 地图策略页面 -->
+            <div id="map-strategy" class="tab-content">
+                <div class="section">
+                    <h3>地图资源规划 🗺️</h3>
+                    <p>该面板展示地图、资源与建筑相关的策略建议，包括：</p>
+                    <ul style="color: #aaa; margin-left: 1.5rem;">
+                        <li>最优建筑布局建议</li>
+                        <li>资源收集最优路线</li>
+                        <li>地区夺取优先级</li>
+                        <li>科技研究路径规划</li>
+                    </ul>
+                    <div id="map-strategies-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div class="muted">加载地图策略...</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

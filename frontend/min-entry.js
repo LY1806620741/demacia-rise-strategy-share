@@ -1,6 +1,7 @@
 import { state, NODE_TTL } from './state.js';
 import { byId, wasmArray, debounce, escapeHtml, highlight, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
+import { getAllEnemyUnits, getAllTechOptions, getBuildings, getHeroes, getOfficialLineups } from './data.js';
 import init, { create_strategy, create_p2p_node, get_strategies, load_official_data, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
 
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -12,20 +13,23 @@ function formatLineup(items) {
   return items.map(item => `${item.name} x${item.count}`).join(', ');
 }
 
-function findUnitName(id, pool) {
-  return pool.find(unit => unit.id === id)?.name || id;
-}
-
 function getEnemyUnitPool() {
-  return Array.isArray(state.config?.enemies) ? state.config.enemies : [];
+  return getAllEnemyUnits();
 }
 
 function getDefenseUnitPool() {
-  const heroes = Array.isArray(state.config?.heroes)
-    ? state.config.heroes.map(hero => ({ ...hero, isHero: true }))
-    : [];
+  const heroes = getHeroes().map(hero => ({ ...hero, isHero: true }));
   const units = Array.isArray(state.config?.units?.demacia) ? state.config.units.demacia : [];
   return [...heroes, ...units];
+}
+
+function getSelectedTechNames() {
+  return Array.from(state.selectedBattleTechs);
+}
+
+function renderEditorTips() {
+  const desc = byId('battle-strategy-desc');
+  if (desc) desc.placeholder = '补充你的战术思路、站位、目标优先级、科技搭配与使用时机...';
 }
 
 function renderEnemyEditor(options = {}) {
@@ -37,14 +41,12 @@ function renderEnemyEditor(options = {}) {
 
   if (!state.enemyQueue.length) {
     editor.innerHTML = '<div class="muted">敌人配队将显示在这里</div>';
-    dropzone.innerHTML = '<div class="muted">将单位拖拽至此，或在下方输入框编辑</div>';
-    if (textInput) {
-      textInput.value = preserveDraft ? state.enemyLineupDraft : '';
-    }
+    dropzone.innerHTML = '<div class="muted">将单位拖拽至此，或在上方输入框编辑</div>';
+    if (textInput) textInput.value = preserveDraft ? state.enemyLineupDraft : '';
     return;
   }
 
-  const cards = state.enemyQueue.map(item => `
+  editor.innerHTML = state.enemyQueue.map(item => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#222;border:1px solid #444;border-radius:4px;padding:.45rem .6rem;margin-bottom:.4rem;">
       <div>
         <div style="font-weight:bold;">${escapeHtml(item.name)}</div>
@@ -58,7 +60,6 @@ function renderEnemyEditor(options = {}) {
     </div>
   `).join('');
 
-  editor.innerHTML = cards;
   dropzone.innerHTML = state.enemyQueue.map(item => `
     <span style="display:inline-flex;align-items:center;gap:.35rem;background:#243447;border:1px solid #3d5a73;border-radius:999px;padding:.35rem .7rem;">
       <strong>${escapeHtml(item.name)}</strong>
@@ -106,17 +107,92 @@ function updateDashboard() {
   if (nodeCount) nodeCount.textContent = String(activeNodeCount);
   if (communityCount) communityCount.textContent = String(strategies.length);
   if (localCount) localCount.textContent = String(strategies.length);
-  if (heroCount) heroCount.textContent = String(Array.isArray(state.config?.heroes) ? state.config.heroes.length : 0);
-  if (buildingCount) buildingCount.textContent = String(Array.isArray(state.config?.buildings) ? state.config.buildings.length : 0);
+  if (heroCount) heroCount.textContent = String(getHeroes().length);
+  if (buildingCount) buildingCount.textContent = String(getBuildings().length);
+}
+
+function renderOfficialLineups() {
+  const container = byId('official-recommendations-container');
+  if (!container) return;
+  const compositions = getOfficialLineups();
+  const techs = getAllTechOptions();
+
+  if (!compositions.length) {
+    container.innerHTML = '<div class="muted">暂无官方阵容数据</div>';
+    return;
+  }
+
+  container.innerHTML = compositions.map((comp, index) => {
+    const tech = techs[index % Math.max(techs.length, 1)];
+    const suggestedCounter = getDefenseUnitPool().slice(index % 3, (index % 3) + 3).map(unit => unit.name).join('、') || '卫兵、游侠';
+    return `
+      <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;display:grid;gap:.45rem;">
+        <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
+          <h4 style="margin:0;color:#ffd54f;">${escapeHtml(comp.name)}</h4>
+          <span class="muted">威胁 ${comp.threat_level || '-'}</span>
+        </div>
+        <div class="muted">${escapeHtml(comp.description || '')}</div>
+        <div><strong>敌人组成：</strong>${escapeHtml((comp.units || []).join('、'))}</div>
+        <div><strong>推荐应对：</strong>${escapeHtml(suggestedCounter)}</div>
+        <div><strong>推荐科技：</strong>${escapeHtml(tech?.name || '战场扩增')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderHeroList() {
+  const list = byId('hero-list');
+  if (!list) return;
+  const heroes = getHeroes();
+  list.innerHTML = heroes.length
+    ? heroes.map(hero => `
+      <div style="background:#1b1b1b;border:1px solid #333;border-radius:8px;padding:.8rem;margin-bottom:.6rem;">
+        <strong>${escapeHtml(hero.name)}</strong>
+        <div class="muted">${escapeHtml(hero.id)} · ${escapeHtml(hero.type || '')}</div>
+        <div style="margin-top:.25rem;">${escapeHtml(hero.description || '')}</div>
+      </div>
+    `).join('')
+    : '<div class="muted">暂无官方英雄数据</div>';
+}
+
+function buildStrategyTitle(description, target) {
+  const desc = (description || '').trim();
+  if (desc) return desc.length > 24 ? `${desc.slice(0, 24)}…` : desc;
+  return target ? `针对 ${target}` : '未命名策略';
+}
+
+function renderCommunityLineups() {
+  const list = byId('strategy-list');
+  if (!list) return;
+  const strategies = wasmArray(get_strategies());
+  list.innerHTML = strategies.length
+    ? strategies.slice().reverse().map(strategy => {
+      const displayTitle = strategy.description || strategy.title || '未命名策略';
+      return `
+        <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.8rem;">
+          <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
+            <strong>${escapeHtml(displayTitle)}</strong>
+            <span class="muted">评分 ${Number(strategy.score || 0).toFixed(1)}</span>
+          </div>
+          <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy.target_hero || '未填写')}</div>
+          <div style="margin:.45rem 0;"><strong>应对阵容：</strong>${escapeHtml(strategy.counter_lineup || '未填写')}</div>
+          <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy.counter_tech || '未填写')}</div>
+          <div class="muted">${escapeHtml(strategy.description || '暂无说明')}</div>
+          <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+            <button type="button" onclick="voteStrategy('${strategy.id}', true)">👍 ${strategy.likes || 0}</button>
+            <button type="button" onclick="voteStrategy('${strategy.id}', false)">👎 ${strategy.dislikes || 0}</button>
+          </div>
+        </div>
+      `;
+    }).join('')
+    : '<div class="muted">暂无社区策略，快发布第一条吧</div>';
+
+  updateDashboard();
 }
 
 function markPeerSeen(nodeId, meta = {}) {
   if (!nodeId || nodeId === state.nodeId) return;
-  state.knownNodes.set(nodeId, {
-    ...state.knownNodes.get(nodeId),
-    ...meta,
-    lastSeen: nowMs(),
-  });
+  state.knownNodes.set(nodeId, { ...state.knownNodes.get(nodeId), ...meta, lastSeen: nowMs() });
 }
 
 function rememberP2PMessage(messageId) {
@@ -133,7 +209,7 @@ function receiveStrategyPayload(json, sourceNodeId) {
   if (sourceNodeId && sourceNodeId !== state.nodeId) {
     markPeerSeen(sourceNodeId, { transport: 'browser-local' });
     p2p_receive_json(json);
-    renderStrategyList();
+    renderCommunityLineups();
     renderSearchResults();
     updateDashboard();
   }
@@ -150,7 +226,7 @@ function importHistoryPayload(payload, sourceNodeId) {
   if (!payload || sourceNodeId === state.nodeId) return;
   markPeerSeen(sourceNodeId, { transport: 'browser-local' });
   p2p_receive_history_json(payload);
-  renderStrategyList();
+  renderCommunityLineups();
   renderSearchResults();
   updateDashboard();
 }
@@ -195,16 +271,13 @@ function broadcastP2PEnvelope(type, payload = null, extra = {}) {
   };
 
   rememberP2PMessage(envelope.messageId);
-
-  if (state.p2pChannel) {
-    state.p2pChannel.postMessage(envelope);
-  }
+  if (state.p2pChannel) state.p2pChannel.postMessage(envelope);
 
   try {
     localStorage.setItem(P2P_STORAGE_KEY, JSON.stringify(envelope));
     localStorage.removeItem(P2P_STORAGE_KEY);
   } catch {
-    // ignore storage failures in private/incognito contexts
+    // ignore storage failures
   }
 
   return envelope;
@@ -221,94 +294,13 @@ function setupLocalP2PTransport() {
     try {
       handleP2PEnvelope(JSON.parse(event.newValue));
     } catch {
-      // ignore malformed local bus messages
+      // ignore malformed messages
     }
   });
 
   window.addEventListener('beforeunload', () => {
     if (state.p2pChannel) state.p2pChannel.close();
   });
-}
-
-function renderOfficialRecommendations() {
-  const container = byId('official-recommendations-container');
-  if (!container) return;
-  const compositions = Array.isArray(state.config?.enemy_compositions) ? state.config.enemy_compositions : [];
-  const techs = Array.isArray(state.config?.tech_tree) ? state.config.tech_tree.flatMap(ch => ch.techs || []) : [];
-
-  if (!compositions.length) {
-    container.innerHTML = '<div class="muted">暂无官方推荐数据</div>';
-    return;
-  }
-
-  container.innerHTML = compositions.map((comp, index) => {
-    const tech = techs[index % Math.max(techs.length, 1)];
-    const recommended = getDefenseUnitPool().slice(0, 2).map(unit => unit.name).join('、') || '卫兵、游侠';
-    return `
-      <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;">
-        <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
-          <h4 style="margin:0;color:#ffd54f;">${escapeHtml(comp.name)}</h4>
-          <span class="muted">威胁 ${comp.threat_level || '-'}</span>
-        </div>
-        <p class="muted" style="margin:.6rem 0;">${escapeHtml(comp.description || '')}</p>
-        <div><strong>敌人组成：</strong>${escapeHtml((comp.units || []).join('、'))}</div>
-        <div style="margin-top:.4rem;"><strong>推荐应对：</strong>${escapeHtml(recommended)}</div>
-        <div style="margin-top:.4rem;"><strong>推荐科技：</strong>${escapeHtml(tech?.name || '战场扩增')}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderHeroList() {
-  const list = byId('hero-list');
-  if (!list) return;
-  const heroes = Array.isArray(state.config?.heroes) ? state.config.heroes : [];
-  list.innerHTML = heroes.length
-    ? heroes.map(hero => `
-      <div style="background:#1b1b1b;border:1px solid #333;border-radius:8px;padding:.8rem;margin-bottom:.6rem;">
-        <strong>${escapeHtml(hero.name)}</strong>
-        <div class="muted">${escapeHtml(hero.id)} · ${escapeHtml(hero.type || '')}</div>
-        <div style="margin-top:.25rem;">${escapeHtml(hero.description || '')}</div>
-      </div>
-    `).join('')
-    : '<div class="muted">暂无官方英雄数据</div>';
-}
-
-function buildStrategyTitle(description, target) {
-  const desc = (description || '').trim();
-  if (desc) {
-    return desc.length > 24 ? `${desc.slice(0, 24)}…` : desc;
-  }
-  return target ? `针对 ${target}` : '未命名策略';
-}
-
-function renderStrategyList() {
-  const list = byId('strategy-list');
-  if (!list) return;
-  const strategies = wasmArray(get_strategies());
-  list.innerHTML = strategies.length
-    ? strategies.slice().reverse().map(strategy => {
-      const displayTitle = strategy.description || strategy.title || '未命名策略';
-      return `
-      <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.8rem;">
-        <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
-          <strong>${escapeHtml(displayTitle)}</strong>
-          <span class="muted">评分 ${Number(strategy.score || 0).toFixed(1)}</span>
-        </div>
-        <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy.target_hero || '未填写')}</div>
-        <div style="margin:.45rem 0;"><strong>应对阵容：</strong>${escapeHtml(strategy.counter_lineup || '未填写')}</div>
-        <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy.counter_tech || '未填写')}</div>
-        <div class="muted">${escapeHtml(strategy.description || '暂无说明')}</div>
-        <div style="display:flex;gap:.5rem;margin-top:.75rem;">
-          <button type="button" onclick="voteStrategy('${strategy.id}', true)">👍 ${strategy.likes || 0}</button>
-          <button type="button" onclick="voteStrategy('${strategy.id}', false)">👎 ${strategy.dislikes || 0}</button>
-        </div>
-      </div>
-    `;
-    }).join('')
-    : '<div class="muted">暂无社区策略，快发布第一条吧</div>';
-
-  updateDashboard();
 }
 
 function syncKnownNodes() {
@@ -339,6 +331,7 @@ function addEnemyUnit(id) {
   else state.enemyQueue.push({ id: unit.id, name: unit.name, count: 1 });
   state.enemyLineupDraft = formatLineup(state.enemyQueue);
   renderEnemyEditor();
+  searchByEnemyLineup();
 }
 
 function changeEnemyUnitCount(id, delta) {
@@ -348,26 +341,24 @@ function changeEnemyUnitCount(id, delta) {
   state.enemyQueue = state.enemyQueue.filter(item => item.count > 0);
   state.enemyLineupDraft = formatLineup(state.enemyQueue);
   renderEnemyEditor();
+  searchByEnemyLineup();
 }
 
 function removeEnemyUnit(id) {
   state.enemyQueue = state.enemyQueue.filter(item => item.id !== id);
   state.enemyLineupDraft = formatLineup(state.enemyQueue);
   renderEnemyEditor();
+  searchByEnemyLineup();
 }
 
 function parseLineupText(text, pool) {
-  return text
-    .split(/[，,]/)
-    .map(chunk => chunk.trim())
-    .filter(Boolean)
-    .map(chunk => {
-      const match = chunk.match(/^(.*?)(?:\s*x\s*(\d+))?$/i);
-      const rawName = (match?.[1] || chunk).trim();
-      const count = Math.max(1, Number(match?.[2] || 1));
-      const unit = pool.find(item => item.name === rawName || item.id === rawName);
-      return unit ? { id: unit.id, name: unit.name, count } : { id: rawName, name: rawName, count };
-    });
+  return text.split(/[，,]/).map(chunk => chunk.trim()).filter(Boolean).map(chunk => {
+    const match = chunk.match(/^(.*?)(?:\s*x\s*(\d+))?$/i);
+    const rawName = (match?.[1] || chunk).trim();
+    const count = Math.max(1, Number(match?.[2] || 1));
+    const unit = pool.find(item => item.name === rawName || item.id === rawName);
+    return unit ? { id: unit.id, name: unit.name, count } : { id: rawName, name: rawName, count };
+  });
 }
 
 function handleEnemyTextInput() {
@@ -409,7 +400,7 @@ function submitBattleStrategy() {
   const desc = byId('battle-strategy-desc')?.value?.trim() || '';
   const target = (state.enemyLineupDraft || formatLineup(state.enemyQueue)).trim();
   const counter = state.selectedCounterUnits.map(unit => unit.name).join(', ');
-  const tech = Array.from(state.selectedBattleTechs).join(', ') || '未选择科技';
+  const tech = getSelectedTechNames().join(', ') || '未选择科技';
 
   if (!desc || !target || !counter) {
     window.alert('请至少填写策略描述、敌人阵容和应对阵容。');
@@ -419,7 +410,7 @@ function submitBattleStrategy() {
   const id = `strategy-${nowMs()}-${Math.random().toString(36).slice(2, 8)}`;
   const title = buildStrategyTitle(desc, target);
   create_strategy(id, title, desc, target, counter, tech);
-  renderStrategyList();
+  renderCommunityLineups();
   searchByEnemyLineup();
   updateDashboard();
 
@@ -466,6 +457,7 @@ function searchByEnemyLineup() {
         </div>
         <div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div>
         <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div>
+        <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div>
         <div class="muted">${escapeHtml(strategy?.description || '')}</div>
       </div>
     `;
@@ -477,13 +469,12 @@ function renderSearchResults() {
   const scope = byId('search-scope')?.value || 'all';
   const container = byId('search-results');
   if (!container) return;
-
   if (!q) {
     container.innerHTML = '<div class="muted">请输入关键词进行检索</div>';
     return;
   }
 
-  let results = wasmArray(search(q, 10));
+  let results = wasmArray(search(q, 12));
   if (scope !== 'all') {
     results = results.filter(item => item.doc_type === (scope === 'community' ? 'strategy' : scope));
   }
@@ -502,7 +493,7 @@ function renderSearchResults() {
 function voteStrategy(id, isLike) {
   if (!id) return;
   vote(id, isLike);
-  renderStrategyList();
+  renderCommunityLineups();
   renderSearchResults();
   searchByEnemyLineup();
   updateDashboard();
@@ -522,7 +513,7 @@ function setupSearchBindings() {
 function installP2PBridge() {
   window.js_p2p_broadcast = (json) => {
     broadcastP2PEnvelope('strategy', json);
-    renderStrategyList();
+    renderCommunityLineups();
     updateDashboard();
   };
 }
@@ -547,25 +538,27 @@ async function bootstrap() {
     if (official && hasOwn(official, 'heroes')) {
       state.config = {
         ...state.config,
-        heroes: Array.isArray(state.config?.heroes) && state.config.heroes.length ? state.config.heroes : official.heroes,
-        buildings: Array.isArray(state.config?.buildings) && state.config.buildings.length ? state.config.buildings : official.buildings,
+        heroes: getHeroes().length ? getHeroes() : official.heroes,
+        buildings: getBuildings().length ? getBuildings() : official.buildings,
       };
     }
   } catch {
-    // keep local config.json fallback
+    // keep local config fallback
   }
 
   setupBattleTechPicker();
   setupEnemyUnitPicker();
   setupCounterUnitSelection(addCounterUnit);
   setupSearchBindings();
+  renderEditorTips();
   renderBattleTechOptions();
   renderEnemyUnitList();
   renderEnemyEditor();
   renderCounterSelection();
-  renderOfficialRecommendations();
+  renderOfficialLineups();
   renderHeroList();
-  renderStrategyList();
+  renderCommunityLineups();
+  renderSearchResults();
   updateDashboard();
 }
 

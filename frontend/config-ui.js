@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { byId } from './utils.js';
-import { getAllEnemyUnits, getAllDefenseUnits } from './data.js';
+import { getAllEnemyUnits, getAllDefenseUnits, getTechTree } from './data.js';
 
 export async function loadConfig() {
   const res = await fetch('./config.json');
@@ -14,12 +14,12 @@ export function renderBattleTechOptions() {
   if (!list || !summary) return;
 
   const normalized = search?.value?.trim().toLowerCase() || '';
-  const chapters = Array.isArray(state.config?.tech_tree) ? state.config.tech_tree : [];
+  const chapters = getTechTree();
   const selected = [];
   list.innerHTML = '';
 
   chapters.forEach(chapter => {
-    const matchedTechs = chapter.techs.filter(tech => {
+    const matchedTechs = (Array.isArray(chapter.techs) ? chapter.techs : []).filter(tech => {
       const text = `${chapter.name} ${tech.name} ${tech.effect} ${tech.description}`.toLowerCase();
       return !normalized || text.includes(normalized);
     });
@@ -151,4 +151,3 @@ export function setupCounterUnitSelection(addCounterUnit) {
     addCounterUnit(e.dataTransfer.getData('text/plain'));
   };
 }
-

@@ -86,32 +86,75 @@
     {
       "chapter": 1,
       "name": "战斗科技",
-      "description": "提升部队作战能力",
+      "description": "提升部队作战能力与单位解锁",
       "techs": [
         { "id": "battlefield_expansion", "name": "战场扩增", "effect": "上场单位上限+1", "description": "战场人口上限+1，最高8个单位栏位。" },
-        { "id": "shield_bash", "name": "护盾猛击", "effect": "士兵攻击附带短暂眩晕", "description": "士兵每次攻击都会短暂打断敌人，为前排争取更多生存空间。" },
+        { "id": "unlock_soldier", "name": "解锁士兵", "effect": "解锁士兵单位", "description": "解锁士兵，这是一种极为坚韧的前线近战单位。" },
+        { "id": "unlock_archer", "name": "解锁弓兵", "effect": "解锁弓兵单位", "description": "解锁弓兵，这是一种强大的通用型单位，能显著增加远程伤害。" },
+        { "id": "unlock_ranger", "name": "解锁游侠", "effect": "解锁游侠单位", "description": "解锁游侠，这种远程单位擅长对生命值较高的敌人造成伤害。" },
+        { "id": "unlock_dragonguard_knight", "name": "龙禽骑士", "effect": "解锁龙禽骑士单位", "description": "解锁龙禽骑士，一种能俯冲攻击敌人并造成高额伤害的特殊单位。" },
+        { "id": "vanguard_upgrade", "name": "无畏先锋", "effect": "将士兵升级为无畏先锋", "description": "将士兵升级为无畏先锋，大幅提升他们的伤害和生存能力。" },
+        { "id": "shield_bash", "name": "护盾猛击", "effect": "士兵攻击附带短暂眩晕", "description": "士兵每次攻击都会使目标晕眩，为前排争取更多生存空间。" },
+        { "id": "reinforced_shield_bash", "name": "强化护盾猛击", "effect": "护盾猛击伤害与眩晕时长提升", "description": "使护盾猛击的伤害与眩晕时长进一步提升。" },
+        { "id": "fortified_endurance", "name": "强化耐力", "effect": "士兵承伤降低", "description": "士兵受到的所有伤害降低25%，更适合承担前线防守任务。" },
+        { "id": "soldier_expansion", "name": "扩增兵力", "effect": "前排兵力规模增加", "description": "卫兵与士兵单位的人员数量增加，提升整体站场能力。" },
         { "id": "multi_shot", "name": "多重射击", "effect": "弓兵可额外射击一个目标", "description": "提升弓兵的清场能力，适合处理中小体型敌群。" },
-        { "id": "armor_piercing", "name": "破甲技术", "effect": "远程单位对重甲目标伤害提高", "description": "弩箭与重型箭矢改良后，可更有效压制重甲敌人与大型单位。" }
+        { "id": "serrated_arrows", "name": "锯齿箭矢", "effect": "弓兵额外伤害提升", "description": "弓兵箭矢经过改良后，能够造成额外攻击伤害。" },
+        { "id": "archer_expansion", "name": "扩大单位规模", "effect": "弓兵单位人数增加", "description": "增加每个弓兵单位的人员数量，提升整体射击覆盖率。" },
+        { "id": "volley_stance", "name": "蓄势齐射", "effect": "开场远程攻速提升", "description": "战斗开始时，弓兵与游侠在短时间内获得攻击速度加成。" },
+        { "id": "reinforced_fletching", "name": "强化箭羽", "effect": "远程单位攻击力提升", "description": "优化箭羽与弩矢结构，使弓兵与游侠获得额外攻击力。" },
+        { "id": "armor_piercing", "name": "破甲技术", "effect": "远程单位对重甲目标伤害提高", "description": "弩箭与重型箭矢改良后，可更有效压制重甲敌人与大型单位。" },
+        { "id": "battle_discipline", "name": "战场纪律", "effect": "集火目标承受额外伤害", "description": "正在被友方近战单位攻击的敌人将受到更多额外伤害。" },
+        { "id": "hardened_frontline", "name": "巩固边疆", "effect": "边境作战减伤", "description": "在边境聚落战斗的单位所受伤害降低，更适合持续守城。" },
+        { "id": "combat_leadership", "name": "战斗领导术", "effect": "存在英雄时非英雄单位伤害提升", "description": "若战场中至少存在一名英雄，所有非英雄单位造成的伤害提升。" },
+        { "id": "heroic_morale", "name": "士气激昂", "effect": "存在英雄时非英雄单位减伤", "description": "若战场中至少存在一名英雄，所有非英雄单位获得额外伤害减免。" },
+        { "id": "formation_support", "name": "列阵支援", "effect": "英雄法力回复提升", "description": "战斗中每拥有一个非英雄单位，英雄获得法力值的速度提升。" },
+        { "id": "grit", "name": "毅力", "effect": "前排进入战斗后获得护甲", "description": "卫兵与士兵进入战斗状态后，短时间内获得额外护甲。" }
       ]
     },
     {
       "chapter": 2,
       "name": "聚落科技",
-      "description": "聚落与建筑发展",
+      "description": "聚落、建筑与城市建设发展",
       "techs": [
         { "id": "settlement_slots", "name": "聚落栏位扩展", "effect": "升级聚落以解锁更多建筑栏位", "description": "1级城市3个栏位，每升一级增加一个栏位，4级满6个栏位。" },
         { "id": "efficient_builders", "name": "高效工匠", "effect": "建筑建造时间减少", "description": "通过工匠组织和施工优化，缩短关键建筑的成型时间。" },
-        { "id": "market_network", "name": "商路网络", "effect": "相邻聚落资源产出提升", "description": "建立稳定贸易路线，提高周边聚落之间的资源转移效率。" }
+        { "id": "efficient_builders_ii", "name": "高效工匠 II", "effect": "进一步减少建筑建造时间", "description": "在高效工匠基础上进一步优化施工流程，继续压缩建造周期。" },
+        { "id": "market_network", "name": "商路网络", "effect": "相邻聚落资源产出提升", "description": "建立稳定贸易路线，提高周边聚落之间的资源转移效率。" },
+        { "id": "unlock_barracks", "name": "解锁兵营", "effect": "解锁兵营建筑", "description": "解锁兵营，可训练基础作战单位，并在后续升级中扩展训练能力。" },
+        { "id": "unlock_quarry", "name": "解锁采石场", "effect": "解锁采石场建筑", "description": "解锁采石场，每回合稳定产出石料资源。" },
+        { "id": "unlock_foundry", "name": "解锁煅炉", "effect": "解锁煅炉建筑", "description": "解锁煅炉，每回合产出金属资源，是高级单位生产的重要建筑。" },
+        { "id": "unlock_durands_workshop", "name": "杜朗的工坊", "effect": "解锁杜朗的工坊", "description": "解锁杜朗的工坊，可产出禁魔石并永久降低研究成本。" },
+        { "id": "unlock_quartermaster", "name": "军需官", "effect": "解锁军需官建筑", "description": "解锁军需官，单位攻击相连敌营时获得额外伤害增益。" },
+        { "id": "unlock_market", "name": "解锁市场", "effect": "解锁市场建筑", "description": "解锁市场，为附近聚落提供额外资源产出增益。" },
+        { "id": "unlock_militia_headquarters", "name": "民兵团总部", "effect": "解锁民兵团总部", "description": "解锁民兵团总部，为聚落战斗提供额外单位支援。" },
+        { "id": "unlock_royal_armory", "name": "皇家军械库", "effect": "解锁皇家军械库", "description": "解锁皇家军械库，提升战斗胜利后的勇气与资源收益。" },
+        { "id": "unlock_lady_of_the_veil_altar", "name": "蒙面之女的祭坛", "effect": "解锁减伤祭坛建筑", "description": "解锁蒙面之女的祭坛，在战斗开局阶段为全体友方提供减伤。" },
+        { "id": "unlock_watchtower", "name": "解锁瞭望塔", "effect": "解锁瞭望塔建筑", "description": "解锁瞭望塔，可延缓敌方威胁抵达该聚落及相连聚落的时间。" },
+        { "id": "unlock_academy", "name": "解锁学院", "effect": "解锁学院建筑", "description": "解锁学院，可基于聚落环境类型提升相关资源产出。" },
+        { "id": "unlock_valorie_roost", "name": "解锁锋喙鸟舍", "effect": "解锁锋喙鸟舍建筑", "description": "解锁锋喙鸟舍，在附近战斗中派出龙禽骑士提供空中支援。" },
+        { "id": "unlock_graykeep", "name": "解锁灰堡", "effect": "解锁灰堡与独特事件", "description": "解锁灰堡，展开一系列特殊事件与高阶区域互动。" },
+        { "id": "fortified_barracks", "name": "强化兵营", "effect": "单位训练速度提升", "description": "强化兵营后，单位训练速度加快，缩短前线补员周期。" }
       ]
     },
     {
       "chapter": 3,
       "name": "研究与资源",
-      "description": "围绕勇气与资源的研究提升",
+      "description": "围绕勇气、环境专精与资源效率的研究提升",
       "techs": [
         { "id": "courage_research", "name": "勇气研究", "effect": "勇气用于解锁王国与单位研究", "description": "战斗胜利、升级聚落和解决特定事件均可获得勇气。" },
         { "id": "heartland_specialization", "name": "腹地专精", "effect": "腹地聚落农业产出提升", "description": "优化腹地聚落的农场布局，使粮食产能更加稳定。" },
-        { "id": "mountain_specialization", "name": "山区专精", "effect": "山区采石场与煅炉成本下降", "description": "针对山区环境优化建造与运输方案，降低关键资源建筑的建设压力。" }
+        { "id": "mountain_specialization", "name": "山区专精", "effect": "山区采石场与煅炉成本下降", "description": "针对山区环境优化建造与运输方案，降低关键资源建筑的建设压力。" },
+        { "id": "mountain_specialization_ii", "name": "山区专精 II", "effect": "进一步降低山区资源建筑成本", "description": "在山区专精基础上继续降低锻炉与采石场的建造和升级成本。" },
+        { "id": "road_building", "name": "铺设道路", "effect": "道路移动时间缩短", "description": "完善王国内交通网络，使各聚落之间的移动时间进一步减少。" },
+        { "id": "anti_magic_refining", "name": "禁魔石加工", "effect": "禁魔石产量提升", "description": "优化禁魔石工场与杜朗工坊的提炼过程，提高关键稀有资源产量。" },
+        { "id": "forestry", "name": "护林场", "effect": "木材产量提升", "description": "通过护林场与可持续伐木研究，提高腹地聚落的木材产出。" },
+        { "id": "shipping_lanes", "name": "商船船队", "effect": "海路旅行时间减少", "description": "建立更稳定的航线和护航机制，降低海路旅行耗时。" },
+        { "id": "urban_renovation", "name": "都市化改造", "effect": "海路相邻聚落产量提升", "description": "改造沿海与交通枢纽聚落，使其资源产出得到额外增益。" },
+        { "id": "navigation", "name": "导航术", "effect": "可在雄都周边建造禁魔石工场", "description": "提升地理与运输管理能力，解锁德玛西亚雄都周边的特殊建筑布局。" },
+        { "id": "battle_survivors", "name": "战斗幸存者", "effect": "战败时随机保留一名单位", "description": "若友方单位在战斗中落败，将随机保留一名幸存单位，降低连续战损压力。" },
+        { "id": "civic_leadership", "name": "市政领导术", "effect": "驻守英雄提升聚落产量", "description": "如果聚落存在至少一名未外出的英雄，所有产量都会获得额外提升。" },
+        { "id": "elite_barracks", "name": "精英兵营", "effect": "雄都单位成本降低并缩短训练时间", "description": "德玛西亚雄都产出单位的成本更低、训练更快，适合高阶战役阶段。" }
       ]
     }
   ],
