@@ -196,17 +196,21 @@
   },
   "town_defense_recommendations": [
     {
-      "town_id": "terbisia",
-      "town_name": "托比西亚",
-      "region": "border",
-      "notes": "边境前线城镇，优先防御诺克萨斯步兵推进与法师压制。",
+      "town_id": "eaglestone",
+      "town_name": "鹰石镇",
+      "region": "mountain",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
-          "wave_id": "terbisia_border_push",
-          "label": "边境推进波次",
-          "incoming_enemy_ids": ["noxian_infantry", "noxian_battlemage", "noxian_drakehound"],
-          "recommended_lineup_ids": ["garen", "guard", "soldier", "archer", "sona"],
-          "recommended_tech_ids": ["battlefield_expansion", "shield_bash", "armor_piercing", "hardened_frontline"]
+          "wave_id": "eaglestone_heavy_assault",
+          "label": "第五章 · 鹰石镇",
+          "incoming_enemy_ids": ["yeti", "tribal_warrior", "troll"],
+          "incoming_enemy_text": "雪人*2，部落战士*15，巨魔*3",
+          "recommended_lineup_ids": ["kayle", "soldier", "garen", "morgana", "galio", "soldier", "soldier"],
+          "recommended_lineup_text": "天使、士兵、盖伦、莫甘娜、加里奥、士兵、士兵",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、盖伦、在密银城建造军需官",
+          "optional_tech_text": "可选精锐盖伦、精锐加里奥、战斗领导术",
+          "tactic": "前排扛住，莫甘娜输出，增加伤害；如果有精锐盖伦，可在战斗开始时就绪技能，更快进入战斗状态"
         }
       ]
     },
@@ -214,124 +218,51 @@
       "town_id": "dawn_fort",
       "town_name": "黎明要塞",
       "region": "border",
-      "notes": "高难度边境要塞，需要更厚的前排和更强的重甲压制能力。",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
           "wave_id": "dawn_fort_noxus_siege",
-          "label": "诺克萨斯重压围攻",
-          "incoming_enemy_ids": ["noxian_infantry", "noxian_mauler", "noxian_battlemage", "basilisk"],
-          "recommended_lineup_ids": ["galio", "garen", "guard", "vanguard", "ranger", "morgana"],
-          "recommended_tech_ids": ["battlefield_expansion", "fortified_endurance", "armor_piercing", "combat_leadership", "unlock_watchtower"]
+          "label": "第五章 · 黎明要塞",
+          "incoming_enemy_text": "龙蜥*4，诺克萨斯士兵*43",
+          "recommended_lineup_text": "盖伦、加里奥、士兵、游侠、游侠、莫甘娜、天使",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、无畏先锋",
+          "optional_tech_text": "可选战斗领导术",
+          "tactic": "莫甘娜主力，前排顶住，游侠处理龙蜥，莫甘娜活到最后"
         }
       ]
     },
     {
-      "town_id": "cloudfield",
-      "town_name": "云田",
+      "town_id": "fossbarrow",
+      "town_name": "福斯拜罗",
       "region": "border",
-      "notes": "云田面对快速突袭与后排压制时，需要机动与远程爆发兼备的配置。",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
-          "wave_id": "cloudfield_fast_strike",
-          "label": "快速突袭波次",
-          "incoming_enemy_ids": ["noxian_drakehound", "drakehound", "tribal_warrior"],
-          "recommended_lineup_ids": ["quinn", "poppy", "guard", "archer", "ranger"],
-          "recommended_tech_ids": ["volley_stance", "reinforced_fletching", "battlefield_expansion", "unlock_valorie_roost"]
+          "wave_id": "fossbarrow_stonebeast_surge",
+          "label": "第五章 · 福斯拜罗",
+          "incoming_enemy_text": "精锐石甲虫*2，龙犬*40，石甲虫*8",
+          "recommended_lineup_text": "莫甘娜、游侠、士兵、士兵、加里奥、盖伦、游侠",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、无畏先锋、在密银城建造军需官",
+          "optional_tech_text": "可选劲弩突破、战斗领导术、精锐加里奥",
+          "tactic": "莫甘娜处理大量龙犬，游侠处理精锐石甲虫，前排顶住，莫甘娜活到最后"
         }
       ]
     },
     {
-      "town_id": "graygate",
-      "town_name": "灰门",
+      "town_id": "chapter5_final_assault",
+      "town_name": "第五章最终任务-诺克萨斯敌袭",
       "region": "border",
-      "notes": "灰门属于后期高压区域，建议使用高研究等级与多英雄支撑整条防线。",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
-          "wave_id": "graygate_late_siege",
-          "label": "后期全面进攻",
-          "incoming_enemy_ids": ["noxian_infantry", "noxian_mauler", "noxian_battlemage", "noxian_drakehound", "basilisk"],
-          "recommended_lineup_ids": ["jarvan_iv", "galio", "quinn", "vanguard", "dragonguard_knight", "ranger"],
-          "recommended_tech_ids": ["battlefield_expansion", "combat_leadership", "heroic_morale", "formation_support", "elite_barracks", "unlock_graykeep"]
-        }
-      ]
-    },
-    {
-      "town_id": "pingze",
-      "town_name": "平泽镇",
-      "region": "mountain",
-      "notes": "山区城镇更适合依托地形与远程火力处理石甲虫、雪人与巨魔。",
-      "waves": [
-        {
-          "wave_id": "pingze_mountain_raids",
-          "label": "山区怪群来袭",
-          "incoming_enemy_ids": ["krug", "yeti", "troll"],
-          "recommended_lineup_ids": ["sona", "archer", "ranger", "guard", "soldier"],
-          "recommended_tech_ids": ["multi_shot", "reinforced_fletching", "mountain_specialization", "unlock_quarry"]
-        }
-      ]
-    },
-    {
-      "town_id": "high_silvermere",
-      "town_name": "密银城",
-      "region": "mountain",
-      "notes": "密银城适合作为精锐空中支援与重甲压制的山地据点。",
-      "waves": [
-        {
-          "wave_id": "silvermere_heavy_hunt",
-          "label": "重甲狩猎波次",
-          "incoming_enemy_ids": ["noxian_mauler", "basilisk", "troll"],
-          "recommended_lineup_ids": ["kayle", "dragonguard_knight", "ranger", "vanguard", "guard"],
-          "recommended_tech_ids": ["unlock_dragonguard_knight", "armor_piercing", "mountain_specialization_ii", "unlock_valorie_roost"]
-        }
-      ]
-    },
-    {
-      "town_id": "brook_valley",
-      "town_name": "溪谷村",
-      "region": "heartland",
-      "notes": "腹地据点优先稳住基础兵力，适合用廉价前排与基础远程压制前期来袭敌人。",
-      "waves": [
-        {
-          "wave_id": "brook_valley_early_defense",
-          "label": "前期守村",
-          "incoming_enemy_ids": ["tribal_warrior", "drakehound"],
-          "recommended_lineup_ids": ["guard", "soldier", "archer", "sona"],
-          "recommended_tech_ids": ["unlock_soldier", "unlock_archer", "shield_bash", "heartland_specialization"]
-        }
-      ]
-    },
-    {
-      "town_id": "viscaria",
-      "town_name": "维斯卡锡亚",
-      "region": "heartland",
-      "notes": "维斯卡锡亚是腹地中期据点，适合用更完整的基础军队对抗混合编队。",
-      "waves": [
-        {
-          "wave_id": "viscaria_midline_hold",
-          "label": "腹地中线防守",
-          "incoming_enemy_ids": ["noxian_infantry", "tribal_warrior", "noxian_battlemage"],
-          "recommended_lineup_ids": ["garen", "guard", "soldier", "archer", "ranger"],
-          "recommended_tech_ids": ["battlefield_expansion", "battle_discipline", "unlock_market", "market_network"]
-        }
-      ]
-    },
-    {
-      "town_id": "eaglestone",
-      "town_name": "鹰石镇",
-      "region": "mountain",
-      "notes": "高难度山地防守战，前排负责扛线，莫甘娜负责核心范围输出。",
-      "waves": [
-        {
-          "wave_id": "eaglestone_heavy_assault",
-          "label": "鹰石镇攻防战",
-          "incoming_enemy_ids": ["yeti", "tribal_warrior", "troll"],
-          "incoming_enemy_text": "雪人*2，部落战士*15，巨魔*3",
-          "recommended_lineup_ids": ["kayle", "soldier", "garen", "morgana", "galio", "soldier", "soldier"],
-          "recommended_lineup_text": "天使、士兵、盖伦、莫甘娜、加里奥、士兵、士兵",
-          "recommended_tech_ids": ["battlefield_expansion", "combat_leadership", "battle_discipline", "battlefield_expansion"],
-          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、盖伦",
-          "optional_tech_text": "可选精锐盖伦、精锐加里奥、战斗领导术",
-          "tactic": "前排扛住，莫甘娜输出"
+          "wave_id": "chapter5_final_noxus_assault",
+          "label": "第五章 · 诺克萨斯敌袭",
+          "incoming_enemy_text": "龙蜥*2，诺克萨斯龙犬*12，诺克萨斯士兵*15",
+          "recommended_lineup_text": "加里奥、盖伦、游侠、士兵、弓兵、卫兵、弓兵",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、无畏先锋",
+          "optional_tech_text": "可选战斗领导术",
+          "tactic": "游侠处理掉龙蜥，弓箭手活到最后",
+          "notes": "卫兵可换莫甘娜"
         }
       ]
     }
