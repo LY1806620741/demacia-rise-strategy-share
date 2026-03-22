@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { byId } from './utils.js';
 import { getAllEnemyUnits, getAllDefenseUnits, getTechTree } from './data.js';
+import { renderUnitHint } from './unit-tooltips.js';
 
 export async function loadConfig() {
   const res = await fetch('./config.json');
@@ -104,7 +105,7 @@ export function renderEnemyUnitList(filter = '', typeFilter = 'all') {
   list.innerHTML = filtered.map(unit => `
     <div style="display:flex;flex-direction:column;justify-content:space-between;background:#222;border:1px solid #444;border-radius:4px;padding:.4rem;min-height:80px;">
       <div>
-        <div style="font-weight:bold;">${unit.name}</div>
+        <div style="font-weight:bold;">${renderUnitHint(unit.name, unit.description || '')}</div>
         <div style="font-size:.8rem;color:#aaa;">${unit.id} / ${unit.type} / ${unit.category}</div>
       </div>
       <button onclick="addEnemyUnit('${unit.id}')" style="margin-top:.25rem;padding:.25rem .4rem;background:#3a8cff;border:none;color:#fff;border-radius:3px;">+ 添加</button>
@@ -137,11 +138,11 @@ export function setupCounterUnitSelection(addCounterUnit) {
   }
 
   defenseUnits.forEach(unit => {
-    const payload = JSON.stringify({ id: unit.id, name: unit.name, isHero: !!unit.isHero });
+    const payload = JSON.stringify({ id: unit.id, name: unit.name, isHero: !!unit.isHero, description: unit.description || '' });
     const button = document.createElement('button');
     button.type = 'button';
-    button.style.cssText = 'padding:0.4rem 0.8rem;background:#2a2a2a;border-radius:4px;cursor:grab;color:#fff;border:1px solid #444;';
-    button.textContent = `${unit.name}${unit.isHero ? '（英雄）' : ''}`;
+    button.style.cssText = 'padding:0.4rem 0.8rem;background:#2a2a2a;border-radius:4px;cursor:grab;color:#fff;border:1px solid #444;display:inline-flex;align-items:center;gap:0.35rem;';
+    button.innerHTML = `${renderUnitHint(unit.name, unit.description || '')}${unit.isHero ? '（英雄）' : ''}`;
     button.draggable = true;
     button.ondragstart = (e) => {
       e.dataTransfer.effectAllowed = 'copy';

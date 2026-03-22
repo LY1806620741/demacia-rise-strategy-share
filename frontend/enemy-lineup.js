@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { byId, escapeHtml } from './utils.js';
 import { getAllEnemyUnits } from './data.js';
+import { renderUnitHint } from './unit-tooltips.js';
 
 export function formatLineup(items) {
   return items.map(item => `${item.name} x${item.count}`).join(', ');
@@ -55,8 +56,9 @@ export function parseLineupText(text, pool = getEnemyUnitPool()) {
       if (!rawName) return;
       const unit = pool.find(item => item.name === rawName || item.id === rawName);
       const key = unit?.id || rawName;
-      const current = merged.get(key) || { id: key, name: unit?.name || rawName, count: 0 };
+      const current = merged.get(key) || { id: key, name: unit?.name || rawName, count: 0, description: unit?.description || '' };
       current.count += count;
+      if (!current.description && unit?.description) current.description = unit.description;
       merged.set(key, current);
     });
   return [...merged.values()];
@@ -87,7 +89,7 @@ export function renderEnemyEditor(options = {}) {
   editor.innerHTML = state.enemyQueue.map(item => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#222;border:1px solid #444;border-radius:4px;padding:.45rem .6rem;margin-bottom:.4rem;">
       <div>
-        <div style="font-weight:bold;">${escapeHtml(item.name)}</div>
+        <div style="font-weight:bold;">${renderUnitHint(item.name, item.description || '')}</div>
         <div class="muted" style="font-size:.82rem;">${escapeHtml(item.id)} · ${item.count} 个</div>
       </div>
       <div style="display:flex;gap:.35rem;">
@@ -100,7 +102,7 @@ export function renderEnemyEditor(options = {}) {
 
   dropzone.innerHTML = state.enemyQueue.map(item => `
     <span style="display:inline-flex;align-items:center;gap:.35rem;background:#243447;border:1px solid #3d5a73;border-radius:999px;padding:.35rem .7rem;">
-      <strong>${escapeHtml(item.name)}</strong>
+      <strong>${renderUnitHint(item.name, item.description || '')}</strong>
       <span>x${item.count}</span>
     </span>
   `).join('');
@@ -116,7 +118,7 @@ export function addEnemyUnit(id, onChange) {
   if (!unit) return;
   const existing = state.enemyQueue.find(item => item.id === id);
   if (existing) existing.count += 1;
-  else state.enemyQueue.push({ id: unit.id, name: unit.name, count: 1 });
+  else state.enemyQueue.push({ id: unit.id, name: unit.name, count: 1, description: unit.description || '' });
   state.enemyLineupDraft = formatLineup(state.enemyQueue);
   renderEnemyEditor();
   onChange?.();
@@ -138,4 +140,3 @@ export function removeEnemyUnit(id, onChange) {
   renderEnemyEditor();
   onChange?.();
 }
-

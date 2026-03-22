@@ -8,40 +8,30 @@
 </head>
 
 <body>
+    <aside class="side-dashboard public-dashboard" aria-label="状态仪表盘">
+        <div class="side-dashboard-title">状态</div>
+        <div class="dashboard-grid compact">
+            <div class="dashboard-item">
+                <div class="label">网络状态</div>
+                <div class="value"><span id="p2p-status-light" class="status-light offline"></span> <span id="p2p-network-state">离线</span></div>
+            </div>
+            <div class="dashboard-item">
+                <div class="label">P2P 节点数</div>
+                <div class="value" id="p2p-node-count">0</div>
+            </div>
+            <div class="dashboard-item">
+                <div class="label">社区策略数</div>
+                <div class="value" id="community-strategy-count">0</div>
+            </div>
+            <div class="dashboard-item">
+                <div class="label">本地保存数</div>
+                <div class="value" id="local-strategy-count">0</div>
+            </div>
+        </div>
+    </aside>
     <div class="container">
         <h1>🛡️ 德玛西亚的崛起 · 策略模拟器</h1>
         <p class="sub">官方基准 + 社区野生策略 + 点赞共识</p>
-
-        <!-- 🆕 公共信息面板 -->
-        <div class="section public-dashboard">
-            <h2>📊 状态仪表盘</h2>
-            <div class="dashboard-grid">
-                <div class="dashboard-item">
-                    <div class="label">网络状态</div>
-                    <div class="value"><span id="p2p-status-light" class="status-light offline"></span> <span id="p2p-network-state">离线</span></div>
-                </div>
-                <div class="dashboard-item">
-                    <div class="label">P2P 节点数</div>
-                    <div class="value" id="p2p-node-count">0</div>
-                </div>
-                <div class="dashboard-item">
-                    <div class="label">社区策略数</div>
-                    <div class="value" id="community-strategy-count">0</div>
-                </div>
-                <div class="dashboard-item">
-                    <div class="label">本地保存数</div>
-                    <div class="value" id="local-strategy-count">0</div>
-                </div>
-                <div class="dashboard-item">
-                    <div class="label">官方英雄数</div>
-                    <div class="value" id="official-hero-count">0</div>
-                </div>
-                <div class="dashboard-item">
-                    <div class="label">官方建筑数</div>
-                    <div class="value" id="official-building-count">0</div>
-                </div>
-            </div>
-        </div>
 
         <!-- 🆕 分页标签卡 -->
         <div class="section tabs">

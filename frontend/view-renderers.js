@@ -1,5 +1,6 @@
 import { byId, wasmArray, escapeHtml, highlight } from './utils.js';
 import { getBuildings, getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
+import { renderUnitHint } from './unit-tooltips.js';
 
 export function renderEditorTips() {
   const desc = byId('battle-strategy-desc');
@@ -15,7 +16,7 @@ export function renderCounterSelection(selectedCounterUnits) {
   }
   selected.innerHTML = selectedCounterUnits.map((unit, index) => `
     <div style="display:inline-flex;align-items:center;gap:.4rem;background:#213127;border:1px solid #3f6b4f;border-radius:999px;padding:.35rem .65rem;">
-      <span>${escapeHtml(unit.name)}${unit.isHero ? '（英雄）' : ''}</span>
+      <span>${renderUnitHint(unit.name, unit.description || '')}${unit.isHero ? '（英雄）' : ''}</span>
       <button type="button" onclick="removeCounterUnit(${index})" style="padding:0 .35rem;line-height:1;">×</button>
     </div>
   `).join('');
@@ -28,8 +29,6 @@ export function updateDashboard({ state, getStrategies }) {
   const nodeCount = byId('p2p-node-count');
   const communityCount = byId('community-strategy-count');
   const localCount = byId('local-strategy-count');
-  const heroCount = byId('official-hero-count');
-  const buildingCount = byId('official-building-count');
   const activeNodeCount = state.knownNodes.size;
   const hasLocalTransport = !!state.p2pChannel || state.p2pNode;
 
@@ -38,8 +37,6 @@ export function updateDashboard({ state, getStrategies }) {
   if (nodeCount) nodeCount.textContent = String(activeNodeCount);
   if (communityCount) communityCount.textContent = String(strategies.length);
   if (localCount) localCount.textContent = String(strategies.length);
-  if (heroCount) heroCount.textContent = String(getHeroes().length);
-  if (buildingCount) buildingCount.textContent = String(getBuildings().length);
 }
 
 export function renderOfficialLineups() {
