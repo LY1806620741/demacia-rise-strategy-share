@@ -174,3 +174,12 @@ https://ddragon.leagueoflegends.com/cdn/16.6.1/data/zh_CN/champion.json
 # 资源文件
 
 语音: 英雄联盟\LeagueClient\Plugins\rcp-fe-lol-navigation\assets.wad\File3679.ogg File3697.ogg File0263.ogg中文
+rcp-fe-lol-navigation\global\default\opal\streamingassets\vo\zh_cn
+
+标题text: rcp-fe-lol-navigation\global\zh_cn\trans-activity-center.json "amg_title": "德玛西亚的崛起",
+
+工程文件: rcp-fe-lol-navigation\global\default\opal
+英雄兵种资源: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\combat_vfx_assets_all.bundle
+地图建筑资源: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\map_buildings_assets_all.
+中翻文字:rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\localization-string-tables-chinese(simplified)(zh-cn)_assets_all.bundle
+兵种敌人图标: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\defaultlocalgroup_assets_all.bundle
