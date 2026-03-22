@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const configPath = path.resolve('/Users/aiden/IdeaProjects/github/League-of-Legends-demacia-rise-sim/config.json');
+const configPath = path.resolve('./config.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 function normalizeLineupToken(token) {
