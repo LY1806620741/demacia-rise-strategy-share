@@ -78,19 +78,19 @@ export function renderHeroList() {
     : '<div class="muted">暂无官方英雄数据</div>';
 }
 
-export function renderSearchResults({ searchFn, scopeValue, queryValue }) {
+export function renderSearchResults({ searchFn, scopeValue, queryValue, limitValue }) {
   const q = queryValue?.trim() || '';
   const scope = scopeValue || 'all';
+  const limit = Math.max(1, Number(limitValue || 8));
   const container = byId('search-results');
   if (!container) return;
   if (!q) {
     container.innerHTML = '<div class="muted">请输入关键词进行检索</div>';
     return;
   }
-  let results = wasmArray(searchFn(q, 12));
+  let results = wasmArray(searchFn(q, limit));
   if (scope !== 'all') results = results.filter(item => item.doc_type === (scope === 'community' ? 'strategy' : scope));
   container.innerHTML = results.length
     ? results.map(item => `<div style="padding:.8rem;border:1px solid #333;border-radius:8px;margin-bottom:.6rem;background:#171717;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${highlight(escapeHtml(item.title || ''), q)}</strong><span class="muted">${escapeHtml(item.doc_type || '')}</span></div><div class="muted" style="margin-top:.4rem;">${highlight(escapeHtml(item.snippet || ''), q)}</div></div>`).join('')
     : '<div class="muted">没有找到相关结果</div>';
 }
-

@@ -15,8 +15,24 @@ export function renderBattleTechOptions() {
 
   const normalized = search?.value?.trim().toLowerCase() || '';
   const chapters = getTechTree();
-  const selected = [];
+  const selected = Array.from(state.selectedBattleTechs);
   list.innerHTML = '';
+
+  if (selected.length) {
+    const selectedBlock = document.createElement('div');
+    selectedBlock.style.marginBottom = '0.9rem';
+    selectedBlock.innerHTML = `<div style="font-weight:bold;color:#9fd3ff;margin-bottom:0.4rem;">已选研究</div><div class="muted" style="margin-bottom:0.35rem;">点击下方勾选框可继续增删研究。</div>`;
+    const chips = document.createElement('div');
+    chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.4rem;';
+    selected.forEach(name => {
+      const chip = document.createElement('span');
+      chip.style.cssText = 'display:inline-flex;align-items:center;background:#1d3557;border:1px solid #457b9d;border-radius:999px;padding:0.3rem 0.65rem;color:#fff;';
+      chip.textContent = name;
+      chips.appendChild(chip);
+    });
+    selectedBlock.appendChild(chips);
+    list.appendChild(selectedBlock);
+  }
 
   chapters.forEach(chapter => {
     const matchedTechs = (Array.isArray(chapter.techs) ? chapter.techs : []).filter(tech => {
@@ -30,10 +46,9 @@ export function renderBattleTechOptions() {
     block.innerHTML = `<div style="font-weight:bold;color:#ffd54f;margin-bottom:0.4rem;">主城等级 ${chapter.chapter} · ${chapter.name}</div>`;
 
     matchedTechs.forEach(tech => {
-      if (state.selectedBattleTechs.has(tech.name)) selected.push(tech.name);
       const label = document.createElement('label');
       label.style.display = 'block';
-      label.style.padding = '0.35rem 0';
+      label.style.padding = '0.45rem 0';
       label.style.cursor = 'pointer';
       label.innerHTML = `
         <input type="checkbox" value="${tech.name}" ${state.selectedBattleTechs.has(tech.name) ? 'checked' : ''} />
@@ -53,12 +68,12 @@ export function renderBattleTechOptions() {
   });
 
   if (!list.children.length) {
-    list.innerHTML = '<div class="muted">未找到匹配的科技</div>';
+    list.innerHTML = '<div class="muted">未找到匹配的研究</div>';
   }
 
   summary.textContent = selected.length
-    ? `已选择科技：${selected.join('、')}`
-    : '未选择科技，将默认记为“未选择科技”';
+    ? `已选择研究：${selected.join('、')}`
+    : '未选择研究，将默认记为“未选择研究”';
 }
 
 export function setupBattleTechPicker() {

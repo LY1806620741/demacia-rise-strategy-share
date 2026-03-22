@@ -19,7 +19,9 @@ function safeRender(label, fn) {
 }
 
 function renderCommunity() {
-  renderCommunityLineups(get_strategies, () => updateDashboard({ state, getStrategies: get_strategies }));
+  renderCommunityLineups(get_strategies, {
+    onRendered: () => updateDashboard({ state, getStrategies: get_strategies }),
+  });
 }
 
 function renderSearch() {
@@ -27,6 +29,7 @@ function renderSearch() {
     searchFn: search,
     scopeValue: byId('search-scope')?.value,
     queryValue: byId('q')?.value,
+    limitValue: byId('similarity-result-limit')?.value,
   });
 }
 
@@ -95,6 +98,11 @@ function setupSearchBindings() {
     handleEnemyTextInput(renderEnemyEditor);
     searchByEnemyLineup();
   }, 150));
+  byId('include-community-search')?.addEventListener('change', searchByEnemyLineup);
+  byId('similarity-result-limit')?.addEventListener('change', () => {
+    searchByEnemyLineup();
+    renderSearch();
+  });
   byId('q')?.addEventListener('input', debounce(renderSearch, 150));
   byId('search-scope')?.addEventListener('change', renderSearch);
 }

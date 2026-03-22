@@ -45,6 +45,7 @@ export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
   const input = byId('enemy-lineup-text-input');
   const query = input?.value?.trim() || state.enemyLineupDraft.trim() || formatLineup(state.enemyQueue);
   const includeCommunity = !!byId('include-community-search')?.checked;
+  const limit = Math.max(1, Number(byId('similarity-result-limit')?.value || 8));
   const container = byId('similarity-recommendations');
   if (!container) return;
   if (!query) {
@@ -52,12 +53,14 @@ export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
     return;
   }
 
-  const officialMatches = findOfficialRecommendationsByEnemyLineup(query, 5);
-  const communityMatches = includeCommunity ? wasmArray(recommendStrategies(query, 8)) : [];
+  const officialLimit = Math.max(3, Math.ceil(limit / 2));
+  const communityLimit = limit;
+  const officialMatches = findOfficialRecommendationsByEnemyLineup(query, officialLimit);
+  const communityMatches = includeCommunity ? wasmArray(recommendStrategies(query, communityLimit)) : [];
   const strategies = includeCommunity ? wasmArray(getStrategies()) : [];
 
   if (!officialMatches.length && !communityMatches.length) {
-    container.innerHTML = '<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;"><strong>暂无匹配策略</strong><div class="muted" style="margin-top:.45rem;">没有找到匹配的官方防守方案；如果需要，也可以勾选“同时搜索社区数据”。</div></div>';
+    container.innerHTML = '<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;"><strong>暂无匹配策略</strong><div class="muted" style="margin-top:.45rem;">没有找到匹配的官方防守方案；你也可以补充并发布自己的社区策略。</div></div>';
     return;
   }
 
@@ -65,14 +68,14 @@ export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
     const wave = item.wave;
     const enemyText = getWaveEnemyLineupText(wave);
     const lineupText = wave.recommended_lineup_text || (wave.recommendedLineup || []).map(unit => unit.name).join('、') || '未配置';
-    const techText = (wave.recommendedTechs || []).length ? wave.recommendedTechs.map(tech => tech.name).join('、') : '未配置';
-    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(item.townName)} · ${escapeHtml(wave.label || '来袭波次')}</strong><span class="muted">匹配度 ${(item.similarity * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>来袭敌人：</strong>${escapeHtml(enemyText)}</div><div style="margin:.45rem 0;"><strong>推荐阵容：</strong>${escapeHtml(lineupText)}</div><div style="margin:.45rem 0;"><strong>推荐科技：</strong>${escapeHtml(techText)}</div>${wave.required_tech_text ? `<div style="margin:.45rem 0;"><strong>必需研究：</strong>${escapeHtml(wave.required_tech_text)}</div>` : ''}${wave.optional_tech_text ? `<div style="margin:.45rem 0;"><strong>可选研究：</strong>${escapeHtml(wave.optional_tech_text)}</div>` : ''}${wave.tactic ? `<div class="muted"><strong>诀窍：</strong>${escapeHtml(wave.tactic)}</div>` : ''}</div>`;
+    const researchText = (wave.recommendedTechs || []).length ? wave.recommendedTechs.map(tech => tech.name).join('、') : '未配置';
+    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(item.townName)} · ${escapeHtml(wave.label || '来袭波次')}</strong><span class="muted">匹配度 ${(item.similarity * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>来袭敌人：</strong>${escapeHtml(enemyText)}</div><div style="margin:.45rem 0;"><strong>推荐阵容：</strong>${escapeHtml(lineupText)}</div><div style="margin:.45rem 0;"><strong>推荐研究：</strong>${escapeHtml(researchText)}</div>${wave.required_tech_text ? `<div style="margin:.45rem 0;"><strong>必需研究：</strong>${escapeHtml(wave.required_tech_text)}</div>` : ''}${wave.optional_tech_text ? `<div style="margin:.45rem 0;"><strong>可选研究：</strong>${escapeHtml(wave.optional_tech_text)}</div>` : ''}${wave.tactic ? `<div class="muted"><strong>诀窍：</strong>${escapeHtml(wave.tactic)}</div>` : ''}</div>`;
   }).join('')}</div>` : '';
 
   const communityHtml = includeCommunity ? `<div><div style="font-weight:bold;color:#9fd3ff;margin-bottom:.6rem;">社区相似策略</div>${communityMatches.length ? communityMatches.map(item => {
     const strategy = strategies.find(s => s.id === item.strategy_id);
     const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
-    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(displayTitle)}</strong><span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div><div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div><div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div><div class="muted">${escapeHtml(strategy?.description || '')}</div></div>`;
+    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(displayTitle)}</strong><span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div><div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div><div style="margin:.45rem 0;"><strong>研究：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div><div class="muted">${escapeHtml(strategy?.description || '')}</div></div>`;
   }).join('') : '<div class="muted">未找到匹配的社区策略</div>'}</div>` : '';
 
   container.innerHTML = `${officialHtml}${communityHtml}`;
