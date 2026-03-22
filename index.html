@@ -57,7 +57,7 @@
             <div id="battle-strategy" class="tab-content active">
                 <div class="section">
                     <h3>战斗策略编辑台</h3>
-                    <div class="muted" style="margin-bottom: 1rem;">先配置敌人阵容，系统会立即搜索社区方案；如果已有方案不满足，再继续补充应对阵容、科技和描述。</div>
+                    <div class="muted" style="margin-bottom: 1rem;">先配置敌人阵容，系统会优先匹配官方防守数据；如需查看社区方案，可开启社区搜索。</div>
                     <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:1rem;align-items:start;">
                         <div style="display:grid;gap:1rem;">
                             <div class="enemy-config-panel" style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
@@ -101,10 +101,14 @@
 
                         <div style="display:grid;gap:1rem;">
                             <div style="border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
-                                <h4 style="margin-top:0;">社区相似策略</h4>
+                                <h4 style="margin-top:0;">官方 / 社区相似策略</h4>
+                                <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;color:#ddd;">
+                                    <input id="include-community-search" type="checkbox" />
+                                    <span>同时搜索社区数据</span>
+                                </label>
                                 <button onclick="searchByEnemyLineup()" style="margin-bottom:.75rem;width:100%;">🔍 搜索相似策略</button>
                                 <div id="similarity-recommendations">
-                                    <div class="muted">先输入或选择敌人阵容，系统会优先推荐已有社区方案。</div>
+                                    <div class="muted">先输入或选择敌人阵容，系统会优先推荐官方防守方案。</div>
                                 </div>
                             </div>
 

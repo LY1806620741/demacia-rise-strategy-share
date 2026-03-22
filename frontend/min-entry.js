@@ -457,9 +457,70 @@ function submitBattleStrategy() {
   renderBattleTechOptions();
 }
 
+function normalizeLineupToken(token) {
+  const normalized = (token || '').trim().replace(/^[\[\]()（）]+|[\[\]()（）]+$/g, '');
+  if (!normalized) return '';
+  const lowered = normalized.toLowerCase();
+  const cleaned = lowered
+    .replace(/[\s]*([x×*])[\s]*\d+$/i, '')
+    .replace(/[\s]+\d+$/i, '')
+    .replace(/^[+＋*×:：]+|[+＋*×:：]+$/g, '')
+    .trim();
+  return cleaned;
+}
+
+function normalizedLineupUnits(lineup) {
+  return new Set(
+    String(lineup || '')
+      .split(/[，,；;\n\t|/]/)
+      .flatMap(segment => segment.split(/[+＋]/))
+      .map(normalizeLineupToken)
+      .filter(Boolean)
+  );
+}
+
+function calculateLineupSimilarity(lineupA, lineupB) {
+  const unitsA = normalizedLineupUnits(lineupA);
+  const unitsB = normalizedLineupUnits(lineupB);
+  if (!unitsA.size && !unitsB.size) return 1;
+  if (!unitsA.size || !unitsB.size) return 0;
+  const intersection = [...unitsA].filter(unit => unitsB.has(unit)).length;
+  const union = new Set([...unitsA, ...unitsB]).size;
+  return union ? intersection / union : 0;
+}
+
+function getWaveEnemyLineupText(wave) {
+  if (wave.incoming_enemy_text) return wave.incoming_enemy_text;
+  if (Array.isArray(wave.incomingEnemies) && wave.incomingEnemies.length) {
+    return wave.incomingEnemies.map(enemy => enemy.name).join('、');
+  }
+  return '';
+}
+
+function findOfficialRecommendationsByEnemyLineup(query, limit = 5) {
+  const resolved = getResolvedTownDefenseRecommendations();
+  const recommendations = resolved.flatMap(entry =>
+    (entry.waves || []).map(wave => {
+      const enemyLineup = getWaveEnemyLineupText(wave);
+      const similarity = calculateLineupSimilarity(enemyLineup, query);
+      return {
+        townName: entry.town?.name || entry.town_name || entry.town_id,
+        region: entry.town?.region || entry.region || 'unknown',
+        notes: entry.notes || '',
+        wave,
+        similarity,
+      };
+    })
+  ).filter(item => item.similarity > 0);
+
+  recommendations.sort((a, b) => b.similarity - a.similarity);
+  return recommendations.slice(0, limit);
+}
+
 function searchByEnemyLineup() {
   const input = byId('enemy-lineup-text-input');
   const query = input?.value?.trim() || state.enemyLineupDraft.trim() || formatLineup(state.enemyQueue);
+  const includeCommunity = !!byId('include-community-search')?.checked;
   const container = byId('similarity-recommendations');
   if (!container) return;
   if (!query) {
@@ -467,34 +528,69 @@ function searchByEnemyLineup() {
     return;
   }
 
-  const recommendations = wasmArray(recommend_strategies_for_enemy(query, 8));
-  if (!recommendations.length) {
+  const officialMatches = findOfficialRecommendationsByEnemyLineup(query, 5);
+  const communityMatches = includeCommunity ? wasmArray(recommend_strategies_for_enemy(query, 8)) : [];
+  const strategies = includeCommunity ? wasmArray(get_strategies()) : [];
+
+  if (!officialMatches.length && !communityMatches.length) {
     container.innerHTML = `
       <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;">
         <strong>暂无匹配策略</strong>
-        <div class="muted" style="margin-top:.45rem;">没有找到足够相似的社区方案，你可以继续在下方补充应对阵容、科技和描述，然后直接发布。</div>
+        <div class="muted" style="margin-top:.45rem;">没有找到匹配的官方防守方案；如果需要，也可以勾选“同时搜索社区数据”。</div>
       </div>
     `;
     return;
   }
 
-  const strategies = wasmArray(get_strategies());
-  container.innerHTML = recommendations.map(item => {
-    const strategy = strategies.find(s => s.id === item.strategy_id);
-    const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
-    return `
-      <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;">
-        <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
-          <strong>${escapeHtml(displayTitle)}</strong>
-          <span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span>
-        </div>
-        <div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div>
-        <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div>
-        <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div>
-        <div class="muted">${escapeHtml(strategy?.description || '')}</div>
-      </div>
-    `;
-  }).join('');
+  const officialHtml = officialMatches.length ? `
+    <div style="margin-bottom:1rem;">
+      <div style="font-weight:bold;color:#ffd54f;margin-bottom:.6rem;">官方防守推荐</div>
+      ${officialMatches.map(item => {
+        const wave = item.wave;
+        const enemyText = getWaveEnemyLineupText(wave);
+        const lineupText = wave.recommended_lineup_text || (wave.recommendedLineup || []).map(unit => unit.name).join('、') || '未配置';
+        const techText = (wave.recommendedTechs || []).length ? wave.recommendedTechs.map(tech => tech.name).join('、') : '未配置';
+        return `
+          <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;">
+            <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
+              <strong>${escapeHtml(item.townName)} · ${escapeHtml(wave.label || '来袭波次')}</strong>
+              <span class="muted">匹配度 ${(item.similarity * 100).toFixed(0)}%</span>
+            </div>
+            <div style="margin:.45rem 0;"><strong>来袭敌人：</strong>${escapeHtml(enemyText)}</div>
+            <div style="margin:.45rem 0;"><strong>推荐阵容：</strong>${escapeHtml(lineupText)}</div>
+            <div style="margin:.45rem 0;"><strong>推荐科技：</strong>${escapeHtml(techText)}</div>
+            ${wave.required_tech_text ? `<div style="margin:.45rem 0;"><strong>必需研究：</strong>${escapeHtml(wave.required_tech_text)}</div>` : ''}
+            ${wave.optional_tech_text ? `<div style="margin:.45rem 0;"><strong>可选研究：</strong>${escapeHtml(wave.optional_tech_text)}</div>` : ''}
+            ${wave.tactic ? `<div class="muted"><strong>诀窍：</strong>${escapeHtml(wave.tactic)}</div>` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  ` : '';
+
+  const communityHtml = includeCommunity ? `
+    <div>
+      <div style="font-weight:bold;color:#9fd3ff;margin-bottom:.6rem;">社区相似策略</div>
+      ${communityMatches.length ? communityMatches.map(item => {
+        const strategy = strategies.find(s => s.id === item.strategy_id);
+        const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
+        return `
+          <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;">
+            <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;">
+              <strong>${escapeHtml(displayTitle)}</strong>
+              <span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span>
+            </div>
+            <div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div>
+            <div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div>
+            <div style="margin:.45rem 0;"><strong>科技：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div>
+            <div class="muted">${escapeHtml(strategy?.description || '')}</div>
+          </div>
+        `;
+      }).join('') : '<div class="muted">未找到匹配的社区策略</div>'}
+    </div>
+  ` : '';
+
+  container.innerHTML = `${officialHtml}${communityHtml}`;
 }
 
 function renderSearchResults() {
