@@ -1,5 +1,5 @@
 import { byId, wasmArray, escapeHtml, highlight } from './utils.js';
-import { getBuildings, getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
+import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 
 export function renderEditorTips() {
@@ -22,21 +22,44 @@ export function renderCounterSelection(selectedCounterUnits) {
   `).join('');
 }
 
+function getNetworkLabel(hasLocalTransport, activeNodeCount) {
+  if (!hasLocalTransport) return '离线';
+  return activeNodeCount > 1 ? '已连接' : '在线';
+}
+
+function getBootstrapSummary(enabledBootstraps) {
+  if (!enabledBootstraps.length) return '未配置公共引导源';
+  return enabledBootstraps
+    .map(item => {
+      const statusLine = `${escapeHtml(item.name)} · ${item.status}${item.preferIpv6 ? ' · IPv6优先' : ''}`;
+      const reasonLine = item.reason ? `<span style="display:block;color:#9aa4b2;">${escapeHtml(item.reason)}</span>` : '';
+      return `${statusLine}${reasonLine}`;
+    })
+    .join('<br>');
+}
+
 export function updateDashboard({ state, getStrategies }) {
   const strategies = wasmArray(getStrategies());
+  const activeNodeCount = state.knownNodes.size;
+  const hasLocalTransport = !!state.p2pChannel || state.p2pNode;
+  const enabledBootstraps = Array.isArray(state.bootstrapStatus) ? state.bootstrapStatus.filter(item => item.enabled) : [];
+  const networkLabel = getNetworkLabel(hasLocalTransport, activeNodeCount);
+
   const stateLabel = byId('p2p-network-state');
   const light = byId('p2p-status-light');
   const nodeCount = byId('p2p-node-count');
   const communityCount = byId('community-strategy-count');
   const localCount = byId('local-strategy-count');
-  const activeNodeCount = state.knownNodes.size;
-  const hasLocalTransport = !!state.p2pChannel || state.p2pNode;
+  const bootstrapCount = byId('p2p-bootstrap-count');
+  const bootstrapSummary = byId('p2p-bootstrap-summary');
 
-  if (stateLabel) stateLabel.textContent = hasLocalTransport ? (activeNodeCount > 1 ? '已连接' : '在线') : '离线';
+  if (stateLabel) stateLabel.textContent = networkLabel;
   if (light) light.className = `status-light ${hasLocalTransport ? 'online' : 'offline'}`;
   if (nodeCount) nodeCount.textContent = String(activeNodeCount);
   if (communityCount) communityCount.textContent = String(strategies.length);
   if (localCount) localCount.textContent = String(strategies.length);
+  if (bootstrapCount) bootstrapCount.textContent = String(enabledBootstraps.length);
+  if (bootstrapSummary) bootstrapSummary.innerHTML = getBootstrapSummary(enabledBootstraps);
 }
 
 export function renderOfficialLineups() {

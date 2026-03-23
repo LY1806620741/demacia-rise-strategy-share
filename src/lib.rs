@@ -1,7 +1,5 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
-mod github_sync;
-
 
 mod search;
 use search as idx;
@@ -85,7 +83,7 @@ pub fn create_strategy(
 
     // P2P 广播（修复版）
     let json = serde_json::to_string(&s).unwrap_or_default();
-    let node = P2PNode {};
+    let node = P2PNode::new();
     node.broadcast_strategy(&json);
 }
 
@@ -101,7 +99,7 @@ pub fn get_strategies() -> JsValue {
 
 #[wasm_bindgen]
 pub fn p2p_receive_json(json: &str) {
-    let node = P2PNode {};
+    let node = P2PNode::new();
     node.on_remote_message(json);
 }
 
@@ -112,19 +110,7 @@ pub fn p2p_receive_history_json(json: &str) -> usize {
 
 #[wasm_bindgen]
 pub fn create_p2p_node() -> P2PNode {
-    P2PNode {}
-}
-
-#[wasm_bindgen]
-pub async fn load_official_data() -> Result<JsValue, JsValue> {
-    let data = github_sync::fetch_official_data().await
-        .map_err(|e| JsValue::from_str(&e))?;
-
-    // 重建索引：用官方数据 + 现有策略
-    let strategies = get_strategies_snapshot();
-    idx::rebuild(&data, &strategies);
-
-    Ok(serde_wasm_bindgen::to_value(&data)?)
+    P2PNode::new()
 }
 
 #[wasm_bindgen]

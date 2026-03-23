@@ -1,14 +1,14 @@
 import { state, NODE_TTL } from './state.js';
 import { byId, debounce, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
-import { formatLineup, renderEnemyEditor, handleEnemyTextInput, addEnemyUnit as addEnemyUnitToQueue, changeEnemyUnitCount as changeEnemyUnitCountInQueue, removeEnemyUnit as removeEnemyUnitFromQueue } from './enemy-lineup.js';
+import { renderEnemyEditor, handleEnemyTextInput, addEnemyUnit as addEnemyUnitToQueue, changeEnemyUnitCount as changeEnemyUnitCountInQueue, removeEnemyUnit as removeEnemyUnitFromQueue } from './enemy-lineup.js';
 import { searchByEnemyLineup as searchEnemyRecommendations } from './enemy-search.js';
 import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults } from './view-renderers.js';
 import { renderCommunityLineups, submitBattleStrategy as submitCommunityStrategy } from './community-strategy.js';
 import { createP2PSync } from './p2p-sync.js';
-import init, { create_strategy, create_p2p_node, get_strategies, load_official_data, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
+import init, { create_strategy, create_p2p_node, get_strategies, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
 
-const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = (obj, key) => Object.hasOwn(obj, key);
 
 function safeRender(label, fn) {
   try {
@@ -71,11 +71,11 @@ function removeCounterUnit(index) {
 }
 
 function switchTab(tabId) {
-  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.toggle('active', tab.id === tabId));
-  document.querySelectorAll('.tab-button').forEach(button => {
+  for (const tab of document.querySelectorAll('.tab-content')) tab.classList.toggle('active', tab.id === tabId);
+  for (const button of document.querySelectorAll('.tab-button')) {
     const active = button.getAttribute('onclick')?.includes(`'${tabId}'`);
     button.classList.toggle('active', !!active);
-  });
+  }
 }
 
 function searchByEnemyLineup() {
@@ -108,7 +108,7 @@ function setupSearchBindings() {
 }
 
 function installP2PBridge() {
-  window.js_p2p_broadcast = json => {
+  globalThis.js_p2p_broadcast = json => {
     p2p.broadcastEnvelope('strategy', json);
     renderCommunity();
     updateDashboard({ state, getStrategies: get_strategies });
@@ -130,27 +130,47 @@ function submitBattleStrategy() {
   });
 }
 
+function syncBootstrapStatusFromNode() {
+  if (!state.p2pNode?.try_bootstrap) return;
+  try {
+    const payload = JSON.stringify(state.networkConfig.bootstrapSources.map(source => ({
+      id: source.id,
+      name: source.name,
+      type: source.type,
+      enabled: source.enabled,
+      supports_wasm: source.supportsWasm,
+      prefer_ipv6: source.preferIpv6,
+      dnsaddr: source.dnsaddr,
+      note: source.note,
+    })));
+    const statuses = state.p2pNode.try_bootstrap(payload);
+    if (Array.isArray(statuses)) state.bootstrapStatus = statuses;
+    else if (state.p2pNode.bootstrap_status) state.bootstrapStatus = state.p2pNode.bootstrap_status() || state.bootstrapStatus;
+  } catch (error) {
+    console.warn('bootstrap validation failed', error);
+  }
+}
+
 async function bootstrap() {
   await init();
   p2p.setupLocalTransport();
   installP2PBridge();
   await loadConfig();
+  const communityToggle = byId('include-community-search');
+  if (communityToggle) communityToggle.checked = state.networkConfig.communitySearchEnabled;
+  const resultLimit = byId('similarity-result-limit');
+  if (resultLimit && state.networkConfig.defaultMaxResults) {
+    resultLimit.value = String(state.networkConfig.defaultMaxResults);
+  }
   state.selectedCounterUnits = [];
   state.enemyLineupDraft = '';
   state.lastHeartbeatAt = 0;
   state.p2pNode = create_p2p_node();
+  syncBootstrapStatusFromNode();
   p2p.syncKnownNodes();
   p2p.broadcastEnvelope('history_request');
   if (state.nodeHeartBeatTimer) clearInterval(state.nodeHeartBeatTimer);
   state.nodeHeartBeatTimer = setInterval(p2p.syncKnownNodes, Math.max(2000, Math.floor(NODE_TTL / 2)));
-  try {
-    const official = await load_official_data();
-    if (official && hasOwn(official, 'heroes')) {
-      state.config = { ...state.config, heroes: state.config?.heroes?.length ? state.config.heroes : official.heroes, buildings: state.config?.buildings?.length ? state.config.buildings : official.buildings };
-    }
-  } catch (error) {
-    console.warn('load_official_data failed, using local config fallback', error);
-  }
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
   safeRender('setupCounterUnitSelection', () => setupCounterUnitSelection(addCounterUnit));
@@ -167,8 +187,8 @@ async function bootstrap() {
   updateDashboard({ state, getStrategies: get_strategies });
 }
 
-window.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection };
+globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode };
 
-Object.assign(window, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
+Object.assign(globalThis, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
 
-bootstrap();
+await bootstrap();

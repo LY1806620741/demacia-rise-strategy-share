@@ -266,5 +266,27 @@
         }
       ]
     }
-  ]
+  ],
+  "network": {
+    "community_search_enabled": true,
+    "default_max_results": 8,
+    "prefer_ipv6": true,
+    "bootstrap_note": "实验性公共引导源，需结合浏览器 WebRTC/libp2p 可达性验证。",
+    "stun_servers": [
+      "stun:stun.l.google.com:19302",
+      "stun:stun1.l.google.com:19302"
+    ],
+    "bootstrap_sources": [
+      {
+        "id": "libp2p-bootstrap-public",
+        "name": "bootstrap.libp2p.io",
+        "type": "public-bootstrap",
+        "enabled": true,
+        "supports_wasm": true,
+        "prefer_ipv6": true,
+        "dnsaddr": "/dnsaddr/bootstrap.libp2p.io",
+        "note": "作为候选 bootstrap 来源使用，不保证所有地址均适配浏览器 WebRTC 传输。"
+      }
+    ]
+  }
 }

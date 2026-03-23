@@ -3,9 +3,47 @@ import { byId } from './utils.js';
 import { getAllEnemyUnits, getAllDefenseUnits, getTechTree } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 
+export function normalizeNetworkConfig(raw = {}) {
+  const bootstrapSources = Array.isArray(raw.bootstrap_sources)
+    ? raw.bootstrap_sources
+        .filter(source => source && source.enabled !== false)
+        .map(source => ({
+          id: source.id || source.name || 'bootstrap-source',
+          name: source.name || source.id || '未命名引导源',
+          type: source.type || 'bootstrap',
+          enabled: source.enabled !== false,
+          supportsWasm: source.supports_wasm !== false,
+          preferIpv6: !!source.prefer_ipv6,
+          dnsaddr: source.dnsaddr || '',
+          note: source.note || '',
+        }))
+    : [];
+
+  return {
+    communitySearchEnabled: raw.community_search_enabled !== false,
+    defaultMaxResults: Math.max(1, Number(raw.default_max_results || 8)),
+    preferIpv6: !!raw.prefer_ipv6,
+    stunServers: Array.isArray(raw.stun_servers) ? raw.stun_servers.filter(Boolean) : [],
+    bootstrapSources,
+    bootstrapNote: raw.bootstrap_note || '',
+  };
+}
+
 export async function loadConfig() {
   const res = await fetch('./config.json');
   state.config = await res.json();
+  state.networkConfig = normalizeNetworkConfig(state.config?.network || {});
+  state.bootstrapStatus = state.networkConfig.bootstrapSources.map(source => ({
+    id: source.id,
+    name: source.name,
+    type: source.type,
+    supportsWasm: source.supportsWasm,
+    preferIpv6: source.preferIpv6,
+    dnsaddr: source.dnsaddr,
+    note: source.note,
+    enabled: source.enabled,
+    status: source.supportsWasm ? '待验证' : '不适用',
+  }));
 }
 
 export function renderBattleTechOptions() {
@@ -25,28 +63,28 @@ export function renderBattleTechOptions() {
     selectedBlock.innerHTML = `<div style="font-weight:bold;color:#9fd3ff;margin-bottom:0.4rem;">已选研究</div><div class="muted" style="margin-bottom:0.35rem;">点击下方勾选框可继续增删研究。</div>`;
     const chips = document.createElement('div');
     chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.4rem;';
-    selected.forEach(name => {
+    for (const name of selected) {
       const chip = document.createElement('span');
       chip.style.cssText = 'display:inline-flex;align-items:center;background:#1d3557;border:1px solid #457b9d;border-radius:999px;padding:0.3rem 0.65rem;color:#fff;';
       chip.textContent = name;
       chips.appendChild(chip);
-    });
+    }
     selectedBlock.appendChild(chips);
     list.appendChild(selectedBlock);
   }
 
-  chapters.forEach(chapter => {
+  for (const chapter of chapters) {
     const matchedTechs = (Array.isArray(chapter.techs) ? chapter.techs : []).filter(tech => {
       const text = `${chapter.name} ${tech.name} ${tech.effect} ${tech.description}`.toLowerCase();
       return !normalized || text.includes(normalized);
     });
-    if (!matchedTechs.length) return;
+    if (!matchedTechs.length) continue;
 
     const block = document.createElement('div');
     block.style.marginBottom = '0.75rem';
     block.innerHTML = `<div style="font-weight:bold;color:#ffd54f;margin-bottom:0.4rem;">主城等级 ${chapter.chapter} · ${chapter.name}</div>`;
 
-    matchedTechs.forEach(tech => {
+    for (const tech of matchedTechs) {
       const label = document.createElement('label');
       label.style.display = 'block';
       label.style.padding = '0.45rem 0';
@@ -63,10 +101,10 @@ export function renderBattleTechOptions() {
         renderBattleTechOptions();
       });
       block.appendChild(label);
-    });
+    }
 
     list.appendChild(block);
-  });
+  }
 
   if (!list.children.length) {
     list.innerHTML = '<div class="muted">未找到匹配的研究</div>';
@@ -116,13 +154,13 @@ export function renderEnemyUnitList(filter = '', typeFilter = 'all') {
 export function setupEnemyUnitPicker() {
   renderEnemyUnitList();
 
-  document.querySelectorAll('.filter-btn').forEach(button => {
+  for (const button of document.querySelectorAll('.filter-btn')) {
     button.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      for (const btn of document.querySelectorAll('.filter-btn')) btn.classList.remove('active');
       button.classList.add('active');
       renderEnemyUnitList('', button.dataset.filter);
     });
-  });
+  }
 }
 
 export function setupCounterUnitSelection(addCounterUnit) {
@@ -137,7 +175,7 @@ export function setupCounterUnitSelection(addCounterUnit) {
     return;
   }
 
-  defenseUnits.forEach(unit => {
+  for (const unit of defenseUnits) {
     const payload = JSON.stringify({ id: unit.id, name: unit.name, isHero: !!unit.isHero, description: unit.description || '' });
     const button = document.createElement('button');
     button.type = 'button';
@@ -150,7 +188,7 @@ export function setupCounterUnitSelection(addCounterUnit) {
     };
     button.onclick = () => addCounterUnit(payload);
     available.appendChild(button);
-  });
+  }
 
   selected.ondragover = (e) => {
     e.preventDefault();
