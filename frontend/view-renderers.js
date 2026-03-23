@@ -23,15 +23,15 @@ export function renderCounterSelection(selectedCounterUnits) {
 }
 
 function getNetworkLabel(hasLocalTransport, activeNodeCount) {
-  if (!hasLocalTransport) return '离线';
-  return activeNodeCount > 1 ? '已连接' : '在线';
+  if (!hasLocalTransport) return '本地同步离线';
+  return activeNodeCount > 1 ? '本地同步已连接' : '本地同步在线';
 }
 
 function getBootstrapSummary(enabledBootstraps) {
   if (!enabledBootstraps.length) return '未配置公共引导源';
   return enabledBootstraps
     .map(item => {
-      const statusLine = `${escapeHtml(item.name)} · ${item.status}${item.preferIpv6 ? ' · IPv6优先' : ''}`;
+      const statusLine = `${escapeHtml(item.name)} · ${item.status} / ${escapeHtml(item.network_status || '未组网')}${item.preferIpv6 ? ' · IPv6优先' : ''}`;
       const reasonLine = item.reason ? `<span style="display:block;color:#9aa4b2;">${escapeHtml(item.reason)}</span>` : '';
       return `${statusLine}${reasonLine}`;
     })
@@ -52,6 +52,7 @@ export function updateDashboard({ state, getStrategies }) {
   const localCount = byId('local-strategy-count');
   const bootstrapCount = byId('p2p-bootstrap-count');
   const bootstrapSummary = byId('p2p-bootstrap-summary');
+  const runtimeSummary = byId('p2p-runtime-summary');
 
   if (stateLabel) stateLabel.textContent = networkLabel;
   if (light) light.className = `status-light ${hasLocalTransport ? 'online' : 'offline'}`;
@@ -60,6 +61,15 @@ export function updateDashboard({ state, getStrategies }) {
   if (localCount) localCount.textContent = String(strategies.length);
   if (bootstrapCount) bootstrapCount.textContent = String(enabledBootstraps.length);
   if (bootstrapSummary) bootstrapSummary.innerHTML = getBootstrapSummary(enabledBootstraps);
+  if (runtimeSummary) {
+    const runtime = state.networkRuntime || {};
+    runtimeSummary.innerHTML = [
+      `远程Peer：${escapeHtml(runtime.peerId || 'wasm-peer-pending')}`,
+      `Swarm：${runtime.swarmReady ? '已初始化' : '未初始化'}`,
+      `最近事件：${escapeHtml(runtime.lastEvent || '无')}`,
+      runtime.lastError ? `最近错误：${escapeHtml(runtime.lastError)}` : ''
+    ].filter(Boolean).join('<br>');
+  }
 }
 
 export function renderOfficialLineups() {

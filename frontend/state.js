@@ -8,6 +8,13 @@ export const state = {
   enemyQueue: [],
   enemyLineupDraft: '',
   config: null,
+  networkRuntime: {
+    peerId: 'wasm-peer-pending',
+    swarmReady: false,
+    connectedPeers: [],
+    lastEvent: '未初始化 swarm',
+    lastError: '',
+  },
   networkConfig: {
     communitySearchEnabled: true,
     defaultMaxResults: 8,

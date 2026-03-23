@@ -151,6 +151,41 @@ function syncBootstrapStatusFromNode() {
   }
 }
 
+function syncNetworkRuntimeFromNode() {
+  if (!state.p2pNode?.network_state) return;
+  try {
+    const runtime = state.p2pNode.network_state();
+    if (!runtime || typeof runtime !== 'object') return;
+    state.networkRuntime = {
+      peerId: runtime.peer_id || state.networkRuntime.peerId,
+      swarmReady: !!runtime.swarm_ready,
+      connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
+      lastEvent: runtime.last_event || '',
+      lastError: runtime.last_error || '',
+    };
+  } catch (error) {
+    console.warn('network state sync failed', error);
+  }
+}
+
+function initRemoteNetworkSkeleton() {
+  if (!state.p2pNode?.init_swarm) return;
+  try {
+    const runtime = state.p2pNode.init_swarm();
+    if (runtime && typeof runtime === 'object') {
+      state.networkRuntime = {
+        peerId: runtime.peer_id || state.networkRuntime.peerId,
+        swarmReady: !!runtime.swarm_ready,
+        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
+        lastEvent: runtime.last_event || '',
+        lastError: runtime.last_error || '',
+      };
+    }
+  } catch (error) {
+    console.warn('remote network skeleton init failed', error);
+  }
+}
+
 async function bootstrap() {
   await init();
   p2p.setupLocalTransport();
@@ -166,7 +201,9 @@ async function bootstrap() {
   state.enemyLineupDraft = '';
   state.lastHeartbeatAt = 0;
   state.p2pNode = create_p2p_node();
+  initRemoteNetworkSkeleton();
   syncBootstrapStatusFromNode();
+  syncNetworkRuntimeFromNode();
   p2p.syncKnownNodes();
   p2p.broadcastEnvelope('history_request');
   if (state.nodeHeartBeatTimer) clearInterval(state.nodeHeartBeatTimer);
@@ -187,7 +224,7 @@ async function bootstrap() {
   updateDashboard({ state, getStrategies: get_strategies });
 }
 
-globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode };
+globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode, syncNetworkRuntimeFromNode, initRemoteNetworkSkeleton };
 
 Object.assign(globalThis, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
 
