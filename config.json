@@ -286,6 +286,26 @@
         "prefer_ipv6": true,
         "dnsaddr": "/dnsaddr/bootstrap.libp2p.io",
         "note": "作为候选 bootstrap 来源使用，不保证所有地址均适配浏览器 WebRTC 传输。"
+      },
+      {
+        "id": "node-6",
+        "name": "node-6.libp2p.io",
+        "type": "public-wss",
+        "enabled": true,
+        "supports_wasm": true,
+        "prefer_ipv6": false,
+        "dnsaddr": "/dns4/node-6.libp2p.io/tcp/443/wss/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+        "note": "显式 wss 地址，适合浏览器直接拨号。"
+      },
+      {
+        "id": "node-2",
+        "name": "node-2.libp2p.io",
+        "type": "public-wss",
+        "enabled": true,
+        "supports_wasm": true,
+        "prefer_ipv6": false,
+        "dnsaddr": "/dns4/node-2.libp2p.io/tcp/443/wss/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+        "note": "显式 wss 地址，适合浏览器直接拨号。"
       }
     ]
   }

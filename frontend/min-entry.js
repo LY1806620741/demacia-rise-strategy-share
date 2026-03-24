@@ -186,6 +186,44 @@ function initRemoteNetworkSkeleton() {
   }
 }
 
+function preflightRemoteDialFromConfig() {
+  if (!state.p2pNode?.dial_addr) return;
+  const candidate = state.networkConfig.bootstrapSources.find(source => source.enabled && source.dnsaddr && !String(source.dnsaddr).startsWith('/dnsaddr/'));
+  if (!candidate) return;
+  try {
+    const runtime = state.p2pNode.dial_addr(candidate.dnsaddr);
+    if (runtime && typeof runtime === 'object') {
+      state.networkRuntime = {
+        peerId: runtime.peer_id || state.networkRuntime.peerId,
+        swarmReady: !!runtime.swarm_ready,
+        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
+        lastEvent: runtime.last_event || state.networkRuntime.lastEvent,
+        lastError: runtime.last_error || state.networkRuntime.lastError,
+      };
+    }
+  } catch (error) {
+    console.warn('remote dial preflight failed', error);
+  }
+}
+
+function pollRemoteNetworkOnce() {
+  if (!state.p2pNode?.poll_once) return;
+  try {
+    const runtime = state.p2pNode.poll_once();
+    if (runtime && typeof runtime === 'object') {
+      state.networkRuntime = {
+        peerId: runtime.peer_id || state.networkRuntime.peerId,
+        swarmReady: !!runtime.swarm_ready,
+        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
+        lastEvent: runtime.last_event || state.networkRuntime.lastEvent,
+        lastError: runtime.last_error || state.networkRuntime.lastError,
+      };
+    }
+  } catch (error) {
+    console.warn('remote network poll failed', error);
+  }
+}
+
 async function bootstrap() {
   await init();
   p2p.setupLocalTransport();
@@ -204,6 +242,8 @@ async function bootstrap() {
   initRemoteNetworkSkeleton();
   syncBootstrapStatusFromNode();
   syncNetworkRuntimeFromNode();
+  preflightRemoteDialFromConfig();
+  pollRemoteNetworkOnce();
   p2p.syncKnownNodes();
   p2p.broadcastEnvelope('history_request');
   if (state.nodeHeartBeatTimer) clearInterval(state.nodeHeartBeatTimer);
@@ -224,7 +264,7 @@ async function bootstrap() {
   updateDashboard({ state, getStrategies: get_strategies });
 }
 
-globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode, syncNetworkRuntimeFromNode, initRemoteNetworkSkeleton };
+globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode, syncNetworkRuntimeFromNode, initRemoteNetworkSkeleton, preflightRemoteDialFromConfig, pollRemoteNetworkOnce };
 
 Object.assign(globalThis, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
 
