@@ -84,8 +84,19 @@ export function get_strategies() {
 export async function create_strategy(strategyObj) {
   // 上传到IPFS并加入本地缓存
   const cid = await uploadCommunityStrategy(strategyObj);
-  localStrategies.push({ ...strategyObj, cid });
+  const newStrategy = { ...strategyObj, cid };
+  localStrategies.push(newStrategy);
+  // 立即刷新仪表盘
+  const communityCount = document.getElementById('community-strategy-count');
+  if (communityCount) communityCount.textContent = String(localStrategies.length);
   return cid;
+}
+
+export function syncLocalStrategies(strategies) {
+  // 用于外部同步本地策略数组
+  localStrategies = Array.isArray(strategies) ? strategies : [];
+  const communityCount = document.getElementById('community-strategy-count');
+  if (communityCount) communityCount.textContent = String(localStrategies.length);
 }
 
 export function recommend_strategies_for_enemy(enemyLineupText, limit = 8) {

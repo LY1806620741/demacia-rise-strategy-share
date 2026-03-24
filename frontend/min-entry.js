@@ -3,7 +3,7 @@ import { byId, debounce, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
 import { renderEnemyEditor, handleEnemyTextInput, addEnemyUnit as addEnemyUnitToQueue, changeEnemyUnitCount as changeEnemyUnitCountInQueue, removeEnemyUnit as removeEnemyUnitFromQueue } from './enemy-lineup.js';
 import { searchByEnemyLineup as searchEnemyRecommendations } from './enemy-search.js';
-import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults } from './view-renderers.js';
+import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults, renderIpfsStatus } from './view-renderers.js';
 import {
   renderCommunityLineups,
   submitBattleStrategy as submitCommunityStrategy,
@@ -34,7 +34,12 @@ function safeRender(label, fn) {
 
 function renderCommunity() {
   renderCommunityLineups(get_strategies, {
-    onRendered: () => updateDashboard({ state, getStrategies: get_strategies }),
+    onRendered: () => {
+      updateDashboard({ state, getStrategies: get_strategies });
+      // 强制刷新社区策略数
+      const communityCount = document.getElementById('community-strategy-count');
+      if (communityCount) communityCount.textContent = String(get_strategies().length);
+    },
   });
 }
 
@@ -144,9 +149,7 @@ function init() {
 
 // 直接用前端初始化流程
 (async function main() {
-  // 在 main() 前确保 state.selectedCounterUnits 初始化
   if (!state.selectedCounterUnits) state.selectedCounterUnits = [];
-
   await loadConfig();
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
@@ -162,6 +165,7 @@ function init() {
   safeRender('renderCommunityLineups', () => renderCommunity());
   safeRender('renderSearchResults', () => renderSearch());
   updateDashboard({ state, getStrategies: get_strategies });
+  safeRender('renderIpfsStatus', () => renderIpfsStatus());
 })();
 
 globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection };
