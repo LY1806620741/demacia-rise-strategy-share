@@ -5,20 +5,13 @@
     <meta charset="UTF-8">
     <title>德玛西亚的崛起 - 策略模拟器</title>
     <link rel="stylesheet" href="app.css">
+    <script src="https://unpkg.com/ipfs-core/dist/index.min.js"></script>
 </head>
 
 <body>
     <aside class="side-dashboard public-dashboard" aria-label="状态仪表盘">
         <div class="side-dashboard-title">状态</div>
         <div class="dashboard-grid compact">
-            <div class="dashboard-item">
-                <div class="label">网络状态</div>
-                <div class="value"><span id="p2p-status-light" class="status-light offline"></span> <span id="p2p-network-state">离线</span></div>
-            </div>
-            <div class="dashboard-item">
-                <div class="label">P2P 节点数</div>
-                <div class="value" id="p2p-node-count">0</div>
-            </div>
             <div class="dashboard-item">
                 <div class="label">社区策略数</div>
                 <div class="value" id="community-strategy-count">0</div>
@@ -27,13 +20,7 @@
                 <div class="label">本地保存数</div>
                 <div class="value" id="local-strategy-count">0</div>
             </div>
-            <div class="dashboard-item">
-                <div class="label">引导源数</div>
-                <div class="value" id="p2p-bootstrap-count">0</div>
-            </div>
         </div>
-        <div class="muted" id="p2p-bootstrap-summary" style="margin-top:.75rem;line-height:1.5;">未配置公共引导源</div>
-        <div class="muted" id="p2p-runtime-summary" style="margin-top:.75rem;line-height:1.5;">远程Peer：wasm-peer-pending<br>Swarm：未初始化<br>最近事件：未初始化 swarm</div>
     </aside>
     <div class="container">
         <h1>🛡️ 德玛西亚的崛起 · 策略模拟器</h1>

@@ -1,6 +1,7 @@
 import { byId, wasmArray, escapeHtml, highlight } from './utils.js';
 import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
+import { getIpfsStatus } from './ipfs-client.js';
 
 export function renderEditorTips() {
   const desc = byId('battle-strategy-desc');
@@ -22,54 +23,14 @@ export function renderCounterSelection(selectedCounterUnits) {
   `).join('');
 }
 
-function getNetworkLabel(hasLocalTransport, activeNodeCount) {
-  if (!hasLocalTransport) return '本地同步离线';
-  return activeNodeCount > 1 ? '本地同步已连接' : '本地同步在线';
-}
-
-function getBootstrapSummary(enabledBootstraps) {
-  if (!enabledBootstraps.length) return '未配置公共引导源';
-  return enabledBootstraps
-    .map(item => {
-      const statusLine = `${escapeHtml(item.name)} · ${item.status} / ${escapeHtml(item.network_status || '未组网')}${item.preferIpv6 ? ' · IPv6优先' : ''}`;
-      const reasonLine = item.reason ? `<span style="display:block;color:#9aa4b2;">${escapeHtml(item.reason)}</span>` : '';
-      return `${statusLine}${reasonLine}`;
-    })
-    .join('<br>');
-}
-
 export function updateDashboard({ state, getStrategies }) {
   const strategies = wasmArray(getStrategies());
-  const activeNodeCount = state.knownNodes.size;
-  const hasLocalTransport = !!state.p2pChannel || state.p2pNode;
-  const enabledBootstraps = Array.isArray(state.bootstrapStatus) ? state.bootstrapStatus.filter(item => item.enabled) : [];
-  const networkLabel = getNetworkLabel(hasLocalTransport, activeNodeCount);
-
-  const stateLabel = byId('p2p-network-state');
-  const light = byId('p2p-status-light');
-  const nodeCount = byId('p2p-node-count');
   const communityCount = byId('community-strategy-count');
   const localCount = byId('local-strategy-count');
-  const bootstrapCount = byId('p2p-bootstrap-count');
-  const bootstrapSummary = byId('p2p-bootstrap-summary');
-  const runtimeSummary = byId('p2p-runtime-summary');
 
-  if (stateLabel) stateLabel.textContent = networkLabel;
-  if (light) light.className = `status-light ${hasLocalTransport ? 'online' : 'offline'}`;
-  if (nodeCount) nodeCount.textContent = String(activeNodeCount);
   if (communityCount) communityCount.textContent = String(strategies.length);
   if (localCount) localCount.textContent = String(strategies.length);
-  if (bootstrapCount) bootstrapCount.textContent = String(enabledBootstraps.length);
-  if (bootstrapSummary) bootstrapSummary.innerHTML = getBootstrapSummary(enabledBootstraps);
-  if (runtimeSummary) {
-    const runtime = state.networkRuntime || {};
-    runtimeSummary.innerHTML = [
-      `远程Peer：${escapeHtml(runtime.peerId || 'wasm-peer-pending')}`,
-      `Swarm：${runtime.swarmReady ? '已初始化' : '未初始化'}`,
-      `最近事件：${escapeHtml(runtime.lastEvent || '无')}`,
-      runtime.lastError ? `最近错误：${escapeHtml(runtime.lastError)}` : ''
-    ].filter(Boolean).join('<br>');
-  }
+  // 只保留社区和本地策略数，移除所有libp2p/Swarm/引导源相关展示
 }
 
 export function renderOfficialLineups() {
@@ -123,4 +84,21 @@ export function renderSearchResults({ searchFn, scopeValue, queryValue, limitVal
   container.innerHTML = results.length
     ? results.map(item => `<div style="padding:.8rem;border:1px solid #333;border-radius:8px;margin-bottom:.6rem;background:#171717;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${highlight(escapeHtml(item.title || ''), q)}</strong><span class="muted">${escapeHtml(item.doc_type || '')}</span></div><div class="muted" style="margin-top:.4rem;">${highlight(escapeHtml(item.snippet || ''), q)}</div></div>`).join('')
     : '<div class="muted">没有找到相关结果</div>';
+}
+
+export async function renderIpfsStatus() {
+  const container = byId('ipfs-status-container');
+  if (!container) return;
+  try {
+    const status = await getIpfsStatus();
+    container.innerHTML = `<div style="font-size:.95em;line-height:1.7;">
+      <strong>IPFS 节点状态</strong><br>
+      Peer ID: <span style="word-break:break-all;">${status.id}</span><br>
+      Agent: ${status.agentVersion}<br>
+      Protocol: ${status.protocolVersion}<br>
+      地址数: ${status.addresses.length}
+    </div>`;
+  } catch (e) {
+    container.innerHTML = '<span style="color:#f66;">IPFS 节点初始化失败</span>';
+  }
 }

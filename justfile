@@ -1,6 +1,6 @@
 # https://just.systems
 
-default: build serve
+default: serve
 
 # 清理构建产物
 clean:

@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { byId, escapeHtml, wasmArray } from './utils.js';
 import { getResolvedTownDefenseRecommendations } from './data.js';
 import { normalizedLineupCounts, formatLineup } from './enemy-lineup.js';
+import { fetchCommunityStrategies, searchStrategies } from './ipfs-client.js';
 
 export function calculateLineupSimilarity(lineupA, lineupB) {
   const countsA = normalizedLineupCounts(lineupA);
@@ -39,6 +40,12 @@ export function findOfficialRecommendationsByEnemyLineup(query, limit = 5) {
     .filter(item => item.similarity > 0)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit);
+}
+
+// 拉取并搜索社区数据
+export async function searchCommunityByEnemyLineup(cidList, keyword) {
+  const strategies = await fetchCommunityStrategies(cidList);
+  return searchStrategies(strategies, keyword);
 }
 
 export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {

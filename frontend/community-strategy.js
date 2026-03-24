@@ -1,4 +1,12 @@
 import { byId, escapeHtml, wasmArray } from './utils.js';
+import {
+  uploadCommunityStrategy,
+  fetchCommunityStrategies,
+  addFavorite,
+  removeFavorite,
+  getFavorites,
+  searchStrategies
+} from './ipfs-client.js';
 
 export function buildStrategyTitle(description, target) {
   const desc = (description || '').trim();
@@ -29,30 +37,75 @@ export function renderCommunityLineups(getStrategies, { onRendered, onVote } = {
   onVote?.();
 }
 
-export function submitBattleStrategy({ state, createStrategy, nowMs, getSelectedTechNames, renderCommunityLineups, searchByEnemyLineup, updateDashboard, renderEnemyEditor, renderCounterSelection, renderBattleTechOptions }) {
-  const notes = byId('battle-strategy-desc')?.value?.trim() || '';
-  const target = state.enemyLineupDraft.trim();
-  const counter = state.selectedCounterUnits.map(unit => unit.name).join('、');
-  const research = getSelectedTechNames().join('、') || '未选择研究';
-  if (!notes || !target || !counter) {
-    window.alert('请至少填写诀窍说明、敌方阵营和应对阵容。');
-    return;
-  }
-
-  const submittedEnemyLineup = target;
-  const id = `strategy-${nowMs()}-${Math.random().toString(36).slice(2, 8)}`;
-  const title = buildStrategyTitle(notes, target);
-  createStrategy(id, title, notes, target, counter, research);
+// 提交社区策略
+export async function submitBattleStrategy({ state, createStrategy, nowMs, getSelectedTechNames, renderCommunityLineups, searchByEnemyLineup, updateDashboard, renderEnemyEditor, renderCounterSelection, renderBattleTechOptions }) {
+  const strategyObj = {
+    // 这里根据实际表单/状态结构组织数据
+    id: 'strategy-' + nowMs(),
+    title: state.strategyTitle || '',
+    notes: state.strategyNotes || '',
+    target: state.enemyLineupDraft || '',
+    counter: state.selectedCounterUnits || [],
+    research: getSelectedTechNames() || [],
+    createdAt: nowMs(),
+    likes: 0,
+    dislikes: 0
+  };
+  const cid = await uploadCommunityStrategy(strategyObj);
+  alert('社区策略已上传，CID: ' + cid);
+  // 可选：推送到公告板/索引
   renderCommunityLineups();
   updateDashboard();
+}
 
-  const descInput = byId('battle-strategy-desc');
-  if (descInput) descInput.value = '';
-  state.selectedCounterUnits = [];
-  state.selectedBattleTechs.clear();
-  state.enemyLineupDraft = submittedEnemyLineup;
-  renderEnemyEditor({ preserveDraft: true });
-  renderCounterSelection();
-  renderBattleTechOptions();
-  searchByEnemyLineup();
+// 拉取社区策略（传入CID列表）
+export async function loadCommunityStrategies(cidList) {
+  return await fetchCommunityStrategies(cidList);
+}
+
+// 收藏/取消收藏
+export function favoriteStrategy(cid) { addFavorite(cid); }
+export function unfavoriteStrategy(cid) { removeFavorite(cid); }
+export function getFavoriteStrategies() { return getFavorites(); }
+
+// 搜索社区策略
+export function searchCommunity(keyword, strategies) {
+  return searchStrategies(strategies, keyword);
+}
+
+// 策略本地缓存（可用IndexedDB/LocalStorage/内存）
+let localStrategies = [];
+
+export function get_strategies() {
+  // 返回本地缓存的所有策略
+  return localStrategies;
+}
+
+export async function create_strategy(strategyObj) {
+  // 上传到IPFS并加入本地缓存
+  const cid = await uploadCommunityStrategy(strategyObj);
+  localStrategies.push({ ...strategyObj, cid });
+  return cid;
+}
+
+export function recommend_strategies_for_enemy(enemyLineupText, limit = 8) {
+  // 简单相似度匹配（可优化为更复杂算法）
+  const kw = enemyLineupText.trim().toLowerCase();
+  return localStrategies
+    .map(s => ({
+      ...s,
+      similarity: s.target?.toLowerCase().includes(kw) ? 1 : 0 // 可扩展为更复杂的匹配
+    }))
+    .filter(s => s.similarity > 0)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
+}
+
+export function vote(id, isLike) {
+  // 本地投票实现，可扩展为IPFS投票
+  const idx = localStrategies.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    if (isLike) localStrategies[idx].likes = (localStrategies[idx].likes || 0) + 1;
+    else localStrategies[idx].dislikes = (localStrategies[idx].dislikes || 0) + 1;
+  }
 }

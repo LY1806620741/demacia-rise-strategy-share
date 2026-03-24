@@ -4,9 +4,23 @@ import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemy
 import { renderEnemyEditor, handleEnemyTextInput, addEnemyUnit as addEnemyUnitToQueue, changeEnemyUnitCount as changeEnemyUnitCountInQueue, removeEnemyUnit as removeEnemyUnitFromQueue } from './enemy-lineup.js';
 import { searchByEnemyLineup as searchEnemyRecommendations } from './enemy-search.js';
 import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults } from './view-renderers.js';
-import { renderCommunityLineups, submitBattleStrategy as submitCommunityStrategy } from './community-strategy.js';
-import { createP2PSync } from './p2p-sync.js';
-import init, { create_strategy, create_p2p_node, get_strategies, p2p_receive_history_json, p2p_receive_json, recommend_strategies_for_enemy, search, vote } from '../pkg/demacia_rise.js';
+import {
+  renderCommunityLineups,
+  submitBattleStrategy as submitCommunityStrategy,
+  get_strategies,
+  create_strategy,
+  recommend_strategies_for_enemy,
+  vote
+} from './community-strategy.js';
+import {
+  uploadCommunityStrategy,
+  fetchCommunityStrategy,
+  fetchCommunityStrategies,
+  addFavorite,
+  removeFavorite,
+  getFavorites,
+  searchStrategies
+} from './ipfs-client.js';
 
 const hasOwn = (obj, key) => Object.hasOwn(obj, key);
 
@@ -26,23 +40,12 @@ function renderCommunity() {
 
 function renderSearch() {
   renderSearchResults({
-    searchFn: search,
+    searchFn: searchCommunity, // 用本地实现的搜索函数
     scopeValue: byId('search-scope')?.value,
     queryValue: byId('q')?.value,
     limitValue: byId('similarity-result-limit')?.value,
   });
 }
-
-const p2p = createP2PSync({
-  state,
-  nodeTtl: NODE_TTL,
-  getStrategies: get_strategies,
-  receiveJson: p2p_receive_json,
-  receiveHistoryJson: p2p_receive_history_json,
-  onCommunityChanged: renderCommunity,
-  onSearchChanged: renderSearch,
-  onDashboardChanged: () => updateDashboard({ state, getStrategies: get_strategies }),
-});
 
 function addEnemyUnit(id) {
   addEnemyUnitToQueue(id, () => searchByEnemyLineup());
@@ -107,12 +110,17 @@ function setupSearchBindings() {
   byId('search-scope')?.addEventListener('change', renderSearch);
 }
 
-function installP2PBridge() {
-  globalThis.js_p2p_broadcast = json => {
-    p2p.broadcastEnvelope('strategy', json);
-    renderCommunity();
-    updateDashboard({ state, getStrategies: get_strategies });
-  };
+// 拉取社区策略
+async function loadCommunityStrategies(cidList) {
+  return await fetchCommunityStrategies(cidList);
+}
+// 收藏/取消收藏
+function favoriteStrategy(cid) { addFavorite(cid); }
+function unfavoriteStrategy(cid) { removeFavorite(cid); }
+function getFavoriteStrategies() { return getFavorites(); }
+// 搜索社区策略
+function searchCommunity(keyword, strategies) {
+  return searchStrategies(strategies, keyword);
 }
 
 function submitBattleStrategy() {
@@ -130,124 +138,16 @@ function submitBattleStrategy() {
   });
 }
 
-function syncBootstrapStatusFromNode() {
-  if (!state.p2pNode?.try_bootstrap) return;
-  try {
-    const payload = JSON.stringify(state.networkConfig.bootstrapSources.map(source => ({
-      id: source.id,
-      name: source.name,
-      type: source.type,
-      enabled: source.enabled,
-      supports_wasm: source.supportsWasm,
-      prefer_ipv6: source.preferIpv6,
-      dnsaddr: source.dnsaddr,
-      note: source.note,
-    })));
-    const statuses = state.p2pNode.try_bootstrap(payload);
-    if (Array.isArray(statuses)) state.bootstrapStatus = statuses;
-    else if (state.p2pNode.bootstrap_status) state.bootstrapStatus = state.p2pNode.bootstrap_status() || state.bootstrapStatus;
-  } catch (error) {
-    console.warn('bootstrap validation failed', error);
-  }
+function init() {
+  // 移除所有与p2pNode、p2p、broadcastEnvelope、swarm相关的代码和调用
 }
 
-function syncNetworkRuntimeFromNode() {
-  if (!state.p2pNode?.network_state) return;
-  try {
-    const runtime = state.p2pNode.network_state();
-    if (!runtime || typeof runtime !== 'object') return;
-    state.networkRuntime = {
-      peerId: runtime.peer_id || state.networkRuntime.peerId,
-      swarmReady: !!runtime.swarm_ready,
-      connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
-      lastEvent: runtime.last_event || '',
-      lastError: runtime.last_error || '',
-    };
-  } catch (error) {
-    console.warn('network state sync failed', error);
-  }
-}
+// 直接用前端初始化流程
+(async function main() {
+  // 在 main() 前确保 state.selectedCounterUnits 初始化
+  if (!state.selectedCounterUnits) state.selectedCounterUnits = [];
 
-function initRemoteNetworkSkeleton() {
-  if (!state.p2pNode?.init_swarm) return;
-  try {
-    const runtime = state.p2pNode.init_swarm();
-    if (runtime && typeof runtime === 'object') {
-      state.networkRuntime = {
-        peerId: runtime.peer_id || state.networkRuntime.peerId,
-        swarmReady: !!runtime.swarm_ready,
-        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
-        lastEvent: runtime.last_event || '',
-        lastError: runtime.last_error || '',
-      };
-    }
-  } catch (error) {
-    console.warn('remote network skeleton init failed', error);
-  }
-}
-
-function preflightRemoteDialFromConfig() {
-  if (!state.p2pNode?.dial_addr) return;
-  const candidate = state.networkConfig.bootstrapSources.find(source => source.enabled && source.dnsaddr && !String(source.dnsaddr).startsWith('/dnsaddr/'));
-  if (!candidate) return;
-  try {
-    const runtime = state.p2pNode.dial_addr(candidate.dnsaddr);
-    if (runtime && typeof runtime === 'object') {
-      state.networkRuntime = {
-        peerId: runtime.peer_id || state.networkRuntime.peerId,
-        swarmReady: !!runtime.swarm_ready,
-        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
-        lastEvent: runtime.last_event || state.networkRuntime.lastEvent,
-        lastError: runtime.last_error || state.networkRuntime.lastError,
-      };
-    }
-  } catch (error) {
-    console.warn('remote dial preflight failed', error);
-  }
-}
-
-function pollRemoteNetworkOnce() {
-  if (!state.p2pNode?.poll_once) return;
-  try {
-    const runtime = state.p2pNode.poll_once();
-    if (runtime && typeof runtime === 'object') {
-      state.networkRuntime = {
-        peerId: runtime.peer_id || state.networkRuntime.peerId,
-        swarmReady: !!runtime.swarm_ready,
-        connectedPeers: Array.isArray(runtime.connected_peers) ? runtime.connected_peers : [],
-        lastEvent: runtime.last_event || state.networkRuntime.lastEvent,
-        lastError: runtime.last_error || state.networkRuntime.lastError,
-      };
-    }
-  } catch (error) {
-    console.warn('remote network poll failed', error);
-  }
-}
-
-async function bootstrap() {
-  await init();
-  p2p.setupLocalTransport();
-  installP2PBridge();
   await loadConfig();
-  const communityToggle = byId('include-community-search');
-  if (communityToggle) communityToggle.checked = state.networkConfig.communitySearchEnabled;
-  const resultLimit = byId('similarity-result-limit');
-  if (resultLimit && state.networkConfig.defaultMaxResults) {
-    resultLimit.value = String(state.networkConfig.defaultMaxResults);
-  }
-  state.selectedCounterUnits = [];
-  state.enemyLineupDraft = '';
-  state.lastHeartbeatAt = 0;
-  state.p2pNode = create_p2p_node();
-  initRemoteNetworkSkeleton();
-  syncBootstrapStatusFromNode();
-  syncNetworkRuntimeFromNode();
-  preflightRemoteDialFromConfig();
-  pollRemoteNetworkOnce();
-  p2p.syncKnownNodes();
-  p2p.broadcastEnvelope('history_request');
-  if (state.nodeHeartBeatTimer) clearInterval(state.nodeHeartBeatTimer);
-  state.nodeHeartBeatTimer = setInterval(p2p.syncKnownNodes, Math.max(2000, Math.floor(NODE_TTL / 2)));
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
   safeRender('setupCounterUnitSelection', () => setupCounterUnitSelection(addCounterUnit));
@@ -262,10 +162,8 @@ async function bootstrap() {
   safeRender('renderCommunityLineups', () => renderCommunity());
   safeRender('renderSearchResults', () => renderSearch());
   updateDashboard({ state, getStrategies: get_strategies });
-}
+})();
 
-globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, syncBootstrapStatusFromNode, syncNetworkRuntimeFromNode, initRemoteNetworkSkeleton, preflightRemoteDialFromConfig, pollRemoteNetworkOnce };
+globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection };
 
 Object.assign(globalThis, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
-
-await bootstrap();
