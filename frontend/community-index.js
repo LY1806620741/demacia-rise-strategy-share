@@ -1,20 +1,40 @@
-import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy } from './ipfs-client.js';
+import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid } from './ipfs-client.js';
 
-const INDEX_STORAGE_KEY = 'community_index_manifest_v1';
+const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
 const LAST_POINTER_KEY = 'community_index_last_pointer_cid';
+const KNOWN_POINTERS_KEY = 'community_index_known_pointers_v1';
 
 export function createEmptyIndex() {
   return {
-    version: 1,
+    version: 2,
     updatedAt: Date.now(),
     sourceCid: '',
     items: [],
   };
 }
 
+function loadKnownPointers() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(KNOWN_POINTERS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.map(value => String(value || '')).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveKnownPointers(values) {
+  const normalized = [...new Set((Array.isArray(values) ? values : []).map(value => String(value || '')).filter(Boolean))];
+  localStorage.setItem(KNOWN_POINTERS_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+export function getKnownPointerCids() {
+  return loadKnownPointers();
+}
+
 export function normalizeIndexManifest(raw = {}) {
   return {
-    version: Number(raw.version || 1),
+    version: Number(raw.version || 2),
     updatedAt: Number(raw.updatedAt || Date.now()),
     sourceCid: String(raw.sourceCid || ''),
     items: Array.isArray(raw.items)
@@ -25,6 +45,7 @@ export function normalizeIndexManifest(raw = {}) {
             addedAt: Number(item.addedAt || Date.now()),
             title: String(item.title || ''),
             target: String(item.target || ''),
+            pinned: item.pinned === true,
           }))
       : [],
   };
@@ -50,8 +71,12 @@ export function getLastPointerCid() {
 }
 
 export function setLastPointerCid(cid) {
-  if (cid) localStorage.setItem(LAST_POINTER_KEY, cid);
-  else localStorage.removeItem(LAST_POINTER_KEY);
+  if (cid) {
+    localStorage.setItem(LAST_POINTER_KEY, cid);
+    saveKnownPointers([cid, ...loadKnownPointers()]);
+  } else {
+    localStorage.removeItem(LAST_POINTER_KEY);
+  }
 }
 
 export function mergeIndexManifest(baseIndex, incomingIndex) {
@@ -66,7 +91,7 @@ export function mergeIndexManifest(baseIndex, incomingIndex) {
     }
   }
   const merged = {
-    version: Math.max(base.version, incoming.version, 1),
+    version: Math.max(base.version, incoming.version, 2),
     updatedAt: Date.now(),
     sourceCid: incoming.sourceCid || base.sourceCid || '',
     items: [...map.values()].sort((a, b) => b.addedAt - a.addedAt),
@@ -86,11 +111,23 @@ export function appendIndexItem(index, item) {
         addedAt: Number(item.addedAt || Date.now()),
         title: String(item.title || ''),
         target: String(item.target || ''),
+        pinned: item.pinned === true,
       },
       ...current.items,
     ],
   };
   return saveLocalIndex(next);
+}
+
+export async function pinIndexedCid(cid) {
+  const result = await pinCommunityCid(cid);
+  const index = loadLocalIndex();
+  const next = {
+    ...index,
+    items: index.items.map(item => item.cid === cid ? { ...item, pinned: true } : item),
+  };
+  saveLocalIndex(next);
+  return result;
 }
 
 export async function publishIndexPointer(index) {
@@ -115,12 +152,28 @@ export async function importIndexFromPointer(pointerCid) {
   return { index: saved, added, pointerCid };
 }
 
+export async function refreshFromKnownPointers() {
+  let local = loadLocalIndex();
+  let totalAdded = 0;
+  for (const pointerCid of loadKnownPointers()) {
+    try {
+      const remote = await fetchIndexManifest(pointerCid);
+      const merged = mergeIndexManifest(local, remote);
+      local = merged.index;
+      totalAdded += merged.added;
+    } catch (error) {
+      console.warn('failed to refresh pointer', pointerCid, error);
+    }
+  }
+  return { index: saveLocalIndex(local), added: totalAdded };
+}
+
 export async function resolveIndexedStrategies(index) {
   const normalized = normalizeIndexManifest(index);
   const records = await fetchCommunityStrategies(normalized.items.map(item => item.cid));
   return normalized.items.map(item => {
     const matched = records.find(record => record.cid === item.cid);
-    return matched ? { ...matched.data, cid: item.cid } : null;
+    return matched ? { ...matched.data, cid: item.cid, pinned: item.pinned === true } : null;
   }).filter(Boolean);
 }
 
@@ -134,3 +187,4 @@ export function importIndexText(text) {
   const { index, added } = mergeIndexManifest(local, parsed);
   return { index: saveLocalIndex(index), added };
 }
+

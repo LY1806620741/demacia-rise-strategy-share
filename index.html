@@ -180,12 +180,12 @@
             <div id="community-lineups" class="tab-content">
                 <div class="section">
                     <h2>🧾 社区阵容数据浏览</h2>
-                    <div class="muted" style="margin-bottom: 1rem;">查看当前同步到本地的社区策略，重点浏览敌人阵容、应对阵容和科技搭配。</div>
+                    <div class="muted" style="margin-bottom: 1rem;">页面加载后会自动检查 IPFS 状态、尝试恢复已知共享入口，并将当前节点是否可作为社区数据提供者显示在状态区。</div>
                     <div style="display:grid;gap:.75rem;margin-bottom:1rem;border:1px solid #333;border-radius:10px;padding:1rem;background:#171717;">
                         <div style="display:grid;grid-template-columns:1fr auto auto;gap:.75rem;align-items:end;">
                             <label style="display:grid;gap:.35rem;">
-                                <span>公告板 / 指针 CID</span>
-                                <input id="community-index-pointer-input" placeholder="粘贴远端索引 CID，用于发现社区更新">
+                                <span>共享索引 CID / 指针 CID</span>
+                                <input id="community-index-pointer-input" placeholder="粘贴远端索引 CID，用于发现社区更新、搜索并固定内容">
                             </label>
                             <button type="button" onclick="syncCommunityIndexFromPointer()">同步索引</button>
                             <button type="button" onclick="publishCommunityIndexPointer()">发布本地索引</button>

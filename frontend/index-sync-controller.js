@@ -8,11 +8,13 @@ import {
   exportIndexText,
   importIndexText,
   resolveIndexedStrategies,
-  getLastPointerCid
+  getLastPointerCid,
+  pinIndexedCid,
+  refreshFromKnownPointers,
+  getKnownPointerCids,
 } from './community-index.js';
-import { renderCommunityIndexStatus } from './view-renderers.js';
+import { renderCommunityIndexStatus, renderIpfsStatus, updateDashboard } from './view-renderers.js';
 import { syncLocalStrategies, get_strategies } from './community-strategy.js';
-import { updateDashboard } from './view-renderers.js';
 import { state } from './state.js';
 
 export function createIndexSyncController({ renderCommunity }) {
@@ -23,7 +25,8 @@ export function createIndexSyncController({ renderCommunity }) {
     syncLocalStrategies(strategies);
     renderCommunity();
     updateDashboard({ state, getStrategies: get_strategies });
-    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message);
+    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message, getKnownPointerCids());
+    await renderIpfsStatus();
   }
 
   function setupCommunityIndexBindings() {
@@ -41,29 +44,52 @@ export function createIndexSyncController({ renderCommunity }) {
   async function syncCommunityIndexFromPointer() {
     const pointerCid = byId('community-index-pointer-input')?.value?.trim();
     if (!pointerCid) {
-      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '请先输入指针 CID');
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '请先输入指针 CID', getKnownPointerCids());
       return;
     }
     try {
       const result = await importIndexFromPointer(pointerCid);
       communityIndex = result.index;
-      await refreshStrategiesFromIndex(`已从公告板同步，新增 ${result.added} 条`);
+      state.communitySync.lastImportedPointerCid = pointerCid;
+      state.communitySync.lastMessage = `已从共享指针同步，新增 ${result.added} 条`;
+      await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
       console.error('failed to sync community index from pointer', error);
-      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：指针无效或远端索引不可读');
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：指针无效或远端索引不可读', getKnownPointerCids());
     }
+  }
+
+  async function refreshCommunityFromKnownPointers() {
+    const result = await refreshFromKnownPointers();
+    communityIndex = result.index;
+    state.communitySync.lastMessage = result.added ? `已从已知共享入口刷新，新增 ${result.added} 条` : '已检查已知共享入口，暂无新增';
+    await refreshStrategiesFromIndex(state.communitySync.lastMessage);
   }
 
   async function publishCommunityIndexPointerAction() {
     try {
       const result = await publishIndexPointer(communityIndex);
       communityIndex = result.index;
+      state.communitySync.lastPublishedPointerCid = result.cid;
+      state.communitySync.lastMessage = '本地索引已发布，可分享给其他人搜索/同步';
       const input = byId('community-index-pointer-input');
       if (input) input.value = result.cid;
-      renderCommunityIndexStatus(communityIndex, result.cid, '本地索引已发布到公告板 CID');
+      await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
       console.error('failed to publish community index pointer', error);
-      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '发布索引失败');
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '发布索引失败', getKnownPointerCids());
+    }
+  }
+
+  async function pinCommunityCidAction(cid) {
+    try {
+      const result = await pinIndexedCid(cid);
+      state.communitySync.lastMessage = `已标记并固定 ${result.cid}`;
+      communityIndex = saveLocalIndex(loadLocalIndex());
+      await refreshStrategiesFromIndex(state.communitySync.lastMessage);
+    } catch (error) {
+      console.error('failed to pin community cid', error);
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '固定失败', getKnownPointerCids());
     }
   }
 
@@ -75,7 +101,7 @@ export function createIndexSyncController({ renderCommunity }) {
     link.download = 'community_index.json';
     link.click();
     URL.revokeObjectURL(url);
-    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '已导出本地索引');
+    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '已导出本地索引', getKnownPointerCids());
   }
 
   function appendCreatedStrategy(created) {
@@ -86,7 +112,7 @@ export function createIndexSyncController({ renderCommunity }) {
       target: created.target,
     });
     saveLocalIndex(communityIndex);
-    return refreshStrategiesFromIndex('已写入本地索引，可继续发布索引 CID 给其他人');
+    return refreshStrategiesFromIndex('已写入本地索引，可继续发布共享指针给其他人');
   }
 
   function hydratePointerInput() {
@@ -98,10 +124,12 @@ export function createIndexSyncController({ renderCommunity }) {
     setupCommunityIndexBindings,
     refreshStrategiesFromIndex,
     syncCommunityIndexFromPointer,
+    refreshCommunityFromKnownPointers,
     publishCommunityIndexPointer: publishCommunityIndexPointerAction,
     exportCommunityIndex,
     appendCreatedStrategy,
     hydratePointerInput,
+    pinCommunityCid: pinCommunityCidAction,
   };
 }
 

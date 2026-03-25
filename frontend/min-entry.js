@@ -8,11 +8,15 @@ import { createIndexSyncController } from './index-sync-controller.js';
 
 function safeRender(label, fn) {
   try {
-    fn();
+    return fn();
   } catch (error) {
     console.error(`[render-failed] ${label}`, error);
+    return null;
   }
 }
+
+const searchController = createSearchController({ renderEnemyEditor, renderCommunity: renderCommunity });
+const indexController = createIndexSyncController({ renderCommunity: renderCommunity });
 
 function renderCommunity() {
   renderCommunityLineups(get_strategies, {
@@ -21,6 +25,7 @@ function renderCommunity() {
       const communityCount = document.getElementById('community-strategy-count');
       if (communityCount) communityCount.textContent = String(get_strategies().length);
     },
+    onPin: () => updateDashboard({ state, getStrategies: get_strategies }),
   });
 }
 
@@ -31,9 +36,6 @@ function switchTab(tabId) {
     button.classList.toggle('active', !!active);
   }
 }
-
-const searchController = createSearchController({ renderEnemyEditor, renderCommunity });
-const indexController = createIndexSyncController({ renderCommunity });
 
 function submitBattleStrategy() {
   return submitCommunityStrategy({
@@ -46,8 +48,15 @@ function submitBattleStrategy() {
     renderEnemyEditor,
     renderCounterSelection: () => renderCounterSelection(state.selectedCounterUnits),
     renderBattleTechOptions,
-    onCreated: created => indexController.appendCreatedStrategy(created),
+    onCreated: async created => {
+      await indexController.appendCreatedStrategy(created);
+      await renderIpfsStatus();
+    },
   });
+}
+
+async function pinCommunityStrategy(cid) {
+  await indexController.pinCommunityCid(cid);
 }
 
 (async function main() {
@@ -67,8 +76,9 @@ function submitBattleStrategy() {
   safeRender('renderHeroList', () => renderHeroList());
   safeRender('renderSearchResults', () => searchController.renderSearch());
   updateDashboard({ state, getStrategies: get_strategies });
-  safeRender('renderIpfsStatus', () => renderIpfsStatus());
-  await indexController.refreshStrategiesFromIndex('本地索引已加载');
+  await safeRender('renderIpfsStatus', () => renderIpfsStatus());
+  await indexController.refreshCommunityFromKnownPointers();
+  await indexController.refreshStrategiesFromIndex('页面已加载，已检查 IPFS 与共享索引状态');
 })();
 
 globalThis.__frontendModules = { state, loadConfig, renderBattleTechOptions, renderEnemyUnitList };
@@ -85,4 +95,6 @@ Object.assign(globalThis, {
   syncCommunityIndexFromPointer: indexController.syncCommunityIndexFromPointer,
   publishCommunityIndexPointer: indexController.publishCommunityIndexPointer,
   exportCommunityIndex: indexController.exportCommunityIndex,
+  pinCommunityStrategy,
 });
+

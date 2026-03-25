@@ -3,6 +3,7 @@ import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } 
 import { renderUnitHint } from './unit-tooltips.js';
 import { getIpfsStatus } from './ipfs-client.js';
 import { normalizeCommunityStrategyRecord } from './strategy-schema.js';
+import { state } from './state.js';
 
 export function renderEditorTips() {
   const desc = byId('battle-strategy-desc');
@@ -28,10 +29,8 @@ export function updateDashboard({ state, getStrategies }) {
   const strategies = wasmArray(getStrategies());
   const communityCount = byId('community-strategy-count');
   const localCount = byId('local-strategy-count');
-
   if (communityCount) communityCount.textContent = String(strategies.length);
   if (localCount) localCount.textContent = String(strategies.length);
-  // 只保留社区和本地策略数，移除所有libp2p/Swarm/引导源相关展示
 }
 
 export function renderOfficialLineups() {
@@ -97,26 +96,51 @@ export function renderSearchResults({ searchFn, scopeValue, queryValue, limitVal
 export async function renderIpfsStatus() {
   const container = byId('ipfs-status-container');
   if (!container) return;
-  try {
-    const status = await getIpfsStatus();
-    container.innerHTML = `<div style="font-size:.95em;line-height:1.7;">
-      <strong>IPFS 节点状态</strong><br>
-      Peer ID: <span style="word-break:break-all;">${status.id}</span><br>
-      Agent: ${status.agentVersion}<br>
-      Protocol: ${status.protocolVersion}<br>
-      地址数: ${status.addresses.length}
+  const status = await getIpfsStatus();
+  state.ipfs = {
+    ...state.ipfs,
+    ready: status.ready,
+    peerId: status.id,
+    addresses: status.addresses,
+    addressCount: status.addressCount,
+    canProvide: status.canProvide,
+    canPin: status.canPin,
+    publishedCids: status.publishedCids,
+    pinnedCids: status.pinnedCids,
+    lastPublishedCid: status.lastPublishedCid,
+    lastPinnedCid: status.lastPinnedCid,
+    lastError: status.lastError,
+  };
+  if (!status.ready) {
+    container.innerHTML = `<div style="font-size:.92em;line-height:1.7;color:#ff8a80;">
+      <strong>IPFS 状态</strong><br>
+      未连接：${escapeHtml(status.lastError || '初始化失败')}<br>
+      当前无法作为社区数据提供者
     </div>`;
-  } catch (e) {
-    container.innerHTML = '<span style="color:#f66;">IPFS 节点初始化失败</span>';
+    return;
   }
+  container.innerHTML = `<div style="font-size:.92em;line-height:1.7;">
+    <strong>IPFS 状态</strong><br>
+    Peer ID: <span style="word-break:break-all;">${escapeHtml(status.id)}</span><br>
+    地址数: ${status.addressCount}<br>
+    提供者状态: <span style="color:${status.canProvide ? '#8bc34a' : '#ffd54f'};">${escapeHtml(status.providerStatus)}</span><br>
+    已发布: ${status.publishedCids.length} 条<br>
+    已固定: ${status.pinnedCids.length} 条
+  </div>`;
 }
 
-export function renderCommunityIndexStatus(index, pointerCid = '', message = '') {
+export function renderCommunityIndexStatus(index, pointerCid = '', message = '', knownPointers = []) {
   const container = byId('community-index-status');
   if (!container) return;
   const itemCount = Array.isArray(index?.items) ? index.items.length : 0;
+  const pinnedCount = Array.isArray(index?.items) ? index.items.filter(item => item.pinned === true).length : 0;
   const updatedAt = index?.updatedAt ? new Date(index.updatedAt).toLocaleString() : '未记录';
-  const pointerLine = pointerCid ? `指针 CID：<span style="word-break:break-all;">${escapeHtml(pointerCid)}</span><br>` : '';
+  const pointerLine = pointerCid ? `当前共享指针：<span style="word-break:break-all;">${escapeHtml(pointerCid)}</span><br>` : '';
+  const knownLine = knownPointers.length ? `已知共享入口：${knownPointers.length} 个<br>` : '';
+  const providerLine = state.ipfs.ready
+    ? `本机提供状态：<span style="color:${state.ipfs.canProvide ? '#8bc34a' : '#ffd54f'};">${state.ipfs.canProvide ? '在线，可提供社区数据' : '已连接，待发布后可提供'}</span><br>`
+    : `本机提供状态：<span style="color:#ff8a80;">IPFS 未连接</span><br>`;
   const messageLine = message ? `<div style="margin-top:.35rem;color:#9fd3ff;">${escapeHtml(message)}</div>` : '';
-  container.innerHTML = `本地索引条目：${itemCount}<br>${pointerLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
+  container.innerHTML = `本地索引条目：${itemCount}<br>已固定条目：${pinnedCount}<br>${pointerLine}${knownLine}${providerLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
 }
+
