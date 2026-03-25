@@ -3,6 +3,8 @@ import { byId, escapeHtml, wasmArray } from './utils.js';
 import { getResolvedTownDefenseRecommendations } from './data.js';
 import { normalizedLineupCounts, formatLineup } from './enemy-lineup.js';
 import { fetchCommunityStrategies, searchStrategies } from './ipfs-client.js';
+import { calculateStrategySimilarity, normalizeCommunityStrategyRecord } from './strategy-schema.js';
+import { getIndexedCids } from './community-index.js';
 
 export function calculateLineupSimilarity(lineupA, lineupB) {
   const countsA = normalizedLineupCounts(lineupA);
@@ -42,13 +44,31 @@ export function findOfficialRecommendationsByEnemyLineup(query, limit = 5) {
     .slice(0, limit);
 }
 
-// 拉取并搜索社区数据
 export async function searchCommunityByEnemyLineup(cidList, keyword) {
   const strategies = await fetchCommunityStrategies(cidList);
   return searchStrategies(strategies, keyword);
 }
 
-export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
+async function findIndexedCommunityRecommendations(query, limit) {
+  const cidList = getIndexedCids();
+  if (!cidList.length) return [];
+  const strategies = await fetchCommunityStrategies(cidList);
+  return strategies
+    .map(record => normalizeCommunityStrategyRecord({ ...record.data, cid: record.cid }))
+    .map(strategy => ({
+      ...strategy,
+      strategy_id: strategy.id,
+      similarity_score: calculateStrategySimilarity(strategy, query),
+    }))
+    .filter(item => item.similarity_score > 0)
+    .sort((a, b) => {
+      if (b.similarity_score !== a.similarity_score) return b.similarity_score - a.similarity_score;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    })
+    .slice(0, limit);
+}
+
+export async function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
   const input = byId('enemy-lineup-text-input');
   const query = input?.value?.trim() || state.enemyLineupDraft.trim() || formatLineup(state.enemyQueue);
   const includeCommunity = !!byId('include-community-search')?.checked;
@@ -61,9 +81,19 @@ export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
   }
 
   const officialLimit = Math.max(3, Math.ceil(limit / 2));
-  const communityLimit = limit;
   const officialMatches = findOfficialRecommendationsByEnemyLineup(query, officialLimit);
-  const communityMatches = includeCommunity ? wasmArray(recommendStrategies(query, communityLimit)) : [];
+  const localCommunityMatches = includeCommunity ? wasmArray(recommendStrategies(query, limit)) : [];
+  const indexedCommunityMatches = includeCommunity ? await findIndexedCommunityRecommendations(query, limit) : [];
+  const communityMap = new Map();
+  [...indexedCommunityMatches, ...localCommunityMatches].forEach(item => {
+    const key = item.strategy_id || item.id || item.cid;
+    if (!key) return;
+    const current = communityMap.get(key);
+    if (!current || (item.similarity_score || 0) > (current.similarity_score || 0)) communityMap.set(key, item);
+  });
+  const communityMatches = [...communityMap.values()]
+    .sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
+    .slice(0, limit);
   const strategies = includeCommunity ? wasmArray(getStrategies()) : [];
 
   if (!officialMatches.length && !communityMatches.length) {
@@ -80,10 +110,11 @@ export function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
   }).join('')}</div>` : '';
 
   const communityHtml = includeCommunity ? `<div><div style="font-weight:bold;color:#9fd3ff;margin-bottom:.6rem;">社区相似策略</div>${communityMatches.length ? communityMatches.map(item => {
-    const strategy = strategies.find(s => s.id === item.strategy_id);
+    const strategy = strategies.find(s => s.id === item.strategy_id) || item;
     const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
-    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(displayTitle)}</strong><span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || '未填写')}</div><div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target_hero || query)}</div><div style="margin:.45rem 0;"><strong>研究：</strong>${escapeHtml(strategy?.counter_tech || '未填写')}</div><div class="muted">${escapeHtml(strategy?.description || '')}</div></div>`;
+    return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(displayTitle)}</strong><span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || strategy?.counter_lineup || '未填写')}</div><div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target || item.target || query)}</div><div style="margin:.45rem 0;"><strong>研究：</strong>${escapeHtml(strategy?.counter_tech || item.counter_tech || '未填写')}</div><div class="muted">${escapeHtml(strategy?.description || item.description || '')}</div><div class="muted" style="margin-top:.35rem;word-break:break-all;">CID：${escapeHtml(strategy?.cid || item.cid || '')}</div></div>`;
   }).join('') : '<div class="muted">未找到匹配的社区策略</div>'}</div>` : '';
 
   container.innerHTML = `${officialHtml}${communityHtml}`;
 }
+

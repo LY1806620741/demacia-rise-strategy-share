@@ -20,13 +20,28 @@ import { state } from './state.js';
 export function createIndexSyncController({ renderCommunity }) {
   let communityIndex = loadLocalIndex();
 
+  function ensureLocalIndexInitialized() {
+    communityIndex = saveLocalIndex(communityIndex);
+    return communityIndex;
+  }
+
   async function refreshStrategiesFromIndex(message = '') {
-    const strategies = await resolveIndexedStrategies(communityIndex);
-    syncLocalStrategies(strategies);
-    renderCommunity();
-    updateDashboard({ state, getStrategies: get_strategies });
-    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message, getKnownPointerCids());
-    await renderIpfsStatus();
+    ensureLocalIndexInitialized();
+    try {
+      const strategies = await resolveIndexedStrategies(communityIndex);
+      syncLocalStrategies(strategies);
+      renderCommunity();
+      updateDashboard({ state, getStrategies: get_strategies });
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message, getKnownPointerCids());
+      await renderIpfsStatus();
+    } catch (error) {
+      console.error('failed to resolve indexed strategies', error);
+      syncLocalStrategies([]);
+      renderCommunity();
+      updateDashboard({ state, getStrategies: get_strategies });
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message || '本地索引已初始化，但远端社区数据暂不可读', getKnownPointerCids());
+      await renderIpfsStatus();
+    }
   }
 
   function setupCommunityIndexBindings() {
@@ -116,6 +131,7 @@ export function createIndexSyncController({ renderCommunity }) {
   }
 
   function hydratePointerInput() {
+    ensureLocalIndexInitialized();
     const pointerInput = byId('community-index-pointer-input');
     if (pointerInput) pointerInput.value = getLastPointerCid();
   }
@@ -130,6 +146,6 @@ export function createIndexSyncController({ renderCommunity }) {
     appendCreatedStrategy,
     hydratePointerInput,
     pinCommunityCid: pinCommunityCidAction,
+    ensureLocalIndexInitialized,
   };
 }
-

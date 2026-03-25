@@ -1,4 +1,5 @@
 import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid } from './ipfs-client.js';
+import { state } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
 const LAST_POINTER_KEY = 'community_index_last_pointer_cid';
@@ -28,8 +29,13 @@ function saveKnownPointers(values) {
   return normalized;
 }
 
+function getConfiguredDefaultPointers() {
+  const configured = state?.config?.community?.default_pointer_cids;
+  return Array.isArray(configured) ? configured.map(value => String(value || '')).filter(Boolean) : [];
+}
+
 export function getKnownPointerCids() {
-  return loadKnownPointers();
+  return [...new Set([...getConfiguredDefaultPointers(), ...loadKnownPointers()])];
 }
 
 export function normalizeIndexManifest(raw = {}) {
@@ -73,7 +79,7 @@ export function getLastPointerCid() {
 export function setLastPointerCid(cid) {
   if (cid) {
     localStorage.setItem(LAST_POINTER_KEY, cid);
-    saveKnownPointers([cid, ...loadKnownPointers()]);
+    saveKnownPointers([cid, ...getKnownPointerCids()]);
   } else {
     localStorage.removeItem(LAST_POINTER_KEY);
   }
@@ -155,7 +161,7 @@ export async function importIndexFromPointer(pointerCid) {
 export async function refreshFromKnownPointers() {
   let local = loadLocalIndex();
   let totalAdded = 0;
-  for (const pointerCid of loadKnownPointers()) {
+  for (const pointerCid of getKnownPointerCids()) {
     try {
       const remote = await fetchIndexManifest(pointerCid);
       const merged = mergeIndexManifest(local, remote);
@@ -188,3 +194,6 @@ export function importIndexText(text) {
   return { index: saveLocalIndex(index), added };
 }
 
+export function getIndexedCids(index = loadLocalIndex()) {
+  return normalizeIndexManifest(index).items.map(item => item.cid);
+}

@@ -62,6 +62,7 @@ async function pinCommunityStrategy(cid) {
 
 (async function main() {
   await loadConfig();
+  indexController.ensureLocalIndexInitialized();
   indexController.hydratePointerInput();
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
