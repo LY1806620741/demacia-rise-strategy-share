@@ -50,6 +50,7 @@ function submitBattleStrategy() {
     renderBattleTechOptions,
     onCreated: async created => {
       await indexController.appendCreatedStrategy(created);
+      await indexController.publishCommunityIndexPointer();
       await renderIpfsStatus();
     },
   });
@@ -97,4 +98,3 @@ Object.assign(globalThis, {
   exportCommunityIndex: indexController.exportCommunityIndex,
   pinCommunityStrategy,
 });
-

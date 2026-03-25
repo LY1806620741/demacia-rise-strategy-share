@@ -97,8 +97,11 @@ export function renderEnemyUnitList(filter = '', typeFilter = 'all') {
   const normalized = filter.trim().toLowerCase();
   const filtered = getAllEnemyUnits().filter(unit => {
     const matchesSearch = !normalized || unit.name.toLowerCase().includes(normalized) || unit.id.toLowerCase().includes(normalized);
+    const isSoldierLike = unit.category === 'noxus'
+      || /步兵|士兵|战士|重击兵|法师/.test(unit.name)
+      || /infantry|soldier|warrior|mauler|mage/.test(unit.id);
     const matchesType = typeFilter === 'all'
-      || (typeFilter === 'soldier' && ['melee', 'ranged'].includes(unit.type))
+      || (typeFilter === 'soldier' && isSoldierLike)
       || (typeFilter === 'wild' && unit.category === 'wild')
       || (typeFilter === 'noxus' && unit.category === 'noxus')
       || (typeFilter === 'hero' && unit.category === 'hero');
