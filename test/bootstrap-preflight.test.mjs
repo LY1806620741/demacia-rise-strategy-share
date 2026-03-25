@@ -3,32 +3,18 @@ import fs from 'node:fs/promises';
 
 const configPath = new URL('../config.json', import.meta.url);
 const rawConfig = JSON.parse(await fs.readFile(configPath, 'utf8'));
-const source = rawConfig.network.bootstrap_sources.find(item => item.name === 'bootstrap.libp2p.io');
 
-function classifyBootstrapAttempt(candidate) {
-  const value = String(candidate || '').trim();
-  if (!value) {
-    return { status: '配置错误', network_status: '未拨号' };
-  }
-  if (value.startsWith('/dnsaddr/')) {
-    return { status: '无法直拨', network_status: '需外部解析' };
-  }
-  const browserCompatible = value.includes('/webrtc') || value.includes('/webtransport') || value.includes('/wss/') || value.endsWith('/wss');
+function normalizeCommunityConfig(raw = {}) {
   return {
-    status: '拨号预检完成',
-    network_status: browserCompatible ? '可尝试拨号' : '协议不兼容',
+    communitySearchEnabled: raw.community_search_enabled !== false,
+    defaultMaxResults: Math.max(1, Number(raw.default_max_results || 8)),
+    pointerHint: String(raw.pointer_hint || '通过指针 CID 同步社区索引'),
   };
 }
 
-assert.ok(source, '应存在 bootstrap.libp2p.io 配置');
-const result = classifyBootstrapAttempt(source.dnsaddr);
-assert.equal(result.status, '无法直拨', 'dnsaddr 引导源当前不应被伪装成可直接拨号');
-assert.equal(result.network_status, '需外部解析', 'dnsaddr 引导源应明确要求先解析成显式浏览器地址');
+const community = normalizeCommunityConfig(rawConfig.community || {});
+assert.equal(community.communitySearchEnabled, true, '社区搜索应默认开启');
+assert.equal(community.defaultMaxResults, 8, '社区搜索默认结果数应为 8');
+assert.match(community.pointerHint, /指针 CID|社区索引/, '应保留当前索引同步提示文案');
 
-const directBrowserAddr = classifyBootstrapAttempt('/dns4/example.com/tcp/443/wss/p2p/12D3KooWExample');
-assert.equal(directBrowserAddr.network_status, '可尝试拨号', '浏览器可达的 wss 地址应标记为可尝试拨号');
-
-const incompatibleAddr = classifyBootstrapAttempt('/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWExample');
-assert.equal(incompatibleAddr.network_status, '协议不兼容', '普通 tcp 地址不应被误判成浏览器可直接拨号');
-
-console.log('bootstrap-preflight: ok');
+console.log('community-config defaults: ok');

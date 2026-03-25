@@ -2,6 +2,7 @@ import { byId, wasmArray, escapeHtml, highlight } from './utils.js';
 import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 import { getIpfsStatus } from './ipfs-client.js';
+import { normalizeCommunityStrategyRecord } from './strategy-schema.js';
 
 export function renderEditorTips() {
   const desc = byId('battle-strategy-desc');
@@ -80,6 +81,13 @@ export function renderSearchResults({ searchFn, scopeValue, queryValue, limitVal
     return;
   }
   let results = wasmArray(searchFn(q, limit));
+  if (scope === 'community') {
+    results = results.map(normalizeCommunityStrategyRecord).slice(0, limit).map(item => ({
+      doc_type: 'strategy',
+      title: item.description || item.title || '未命名策略',
+      snippet: [item.target, item.counter_lineup, item.counter_tech, item.description].filter(Boolean).join(' · '),
+    }));
+  }
   if (scope !== 'all') results = results.filter(item => item.doc_type === (scope === 'community' ? 'strategy' : scope));
   container.innerHTML = results.length
     ? results.map(item => `<div style="padding:.8rem;border:1px solid #333;border-radius:8px;margin-bottom:.6rem;background:#171717;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${highlight(escapeHtml(item.title || ''), q)}</strong><span class="muted">${escapeHtml(item.doc_type || '')}</span></div><div class="muted" style="margin-top:.4rem;">${highlight(escapeHtml(item.snippet || ''), q)}</div></div>`).join('')

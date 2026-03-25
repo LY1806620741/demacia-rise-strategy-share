@@ -4,46 +4,16 @@ import { getAllEnemyUnits, getAllDefenseUnits, getTechTree } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 
 export function normalizeNetworkConfig(raw = {}) {
-  const bootstrapSources = Array.isArray(raw.bootstrap_sources)
-    ? raw.bootstrap_sources
-        .filter(source => source && source.enabled !== false)
-        .map(source => ({
-          id: source.id || source.name || 'bootstrap-source',
-          name: source.name || source.id || '未命名引导源',
-          type: source.type || 'bootstrap',
-          enabled: source.enabled !== false,
-          supportsWasm: source.supports_wasm !== false,
-          preferIpv6: !!source.prefer_ipv6,
-          dnsaddr: source.dnsaddr || '',
-          note: source.note || '',
-        }))
-    : [];
-
   return {
     communitySearchEnabled: raw.community_search_enabled !== false,
     defaultMaxResults: Math.max(1, Number(raw.default_max_results || 8)),
-    preferIpv6: !!raw.prefer_ipv6,
-    stunServers: Array.isArray(raw.stun_servers) ? raw.stun_servers.filter(Boolean) : [],
-    bootstrapSources,
-    bootstrapNote: raw.bootstrap_note || '',
   };
 }
 
 export async function loadConfig() {
   const res = await fetch('./config.json');
   state.config = await res.json();
-  state.networkConfig = normalizeNetworkConfig(state.config?.network || {});
-  state.bootstrapStatus = state.networkConfig.bootstrapSources.map(source => ({
-    id: source.id,
-    name: source.name,
-    type: source.type,
-    supportsWasm: source.supportsWasm,
-    preferIpv6: source.preferIpv6,
-    dnsaddr: source.dnsaddr,
-    note: source.note,
-    enabled: source.enabled,
-    status: source.supportsWasm ? '待验证' : '不适用',
-  }));
+  state.networkConfig = normalizeNetworkConfig(state.config?.community || state.config?.network || {});
 }
 
 export function renderBattleTechOptions() {

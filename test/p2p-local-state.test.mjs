@@ -1,44 +1,22 @@
 import assert from 'node:assert/strict';
 
-const NODE_TTL = 10000;
-const state = {
-  nodeId: 'self-node',
-  knownNodes: new Map(),
-  p2pNode: {},
-  p2pChannel: { postMessage() {} },
-  lastHeartbeatAt: 0,
-};
-
-function nowMs() {
-  return 1000;
+function createCommunitySyncState() {
+  return {
+    lastPublishedPointerCid: '',
+    lastImportedPointerCid: '',
+    lastMessage: '未同步索引',
+  };
 }
 
-function syncKnownNodes() {
-  const cutoff = nowMs() - NODE_TTL;
-  for (const [key, value] of state.knownNodes.entries()) {
-    if ((value.lastSeen || 0) < cutoff) state.knownNodes.delete(key);
-  }
+const syncState = createCommunitySyncState();
+assert.equal(syncState.lastPublishedPointerCid, '', '初始不应存在已发布指针');
+assert.equal(syncState.lastImportedPointerCid, '', '初始不应存在已导入指针');
+assert.equal(syncState.lastMessage, '未同步索引', '初始应提示尚未同步索引');
 
-  state.knownNodes.set(state.nodeId, {
-    lastSeen: nowMs(),
-    transport: state.p2pChannel ? 'broadcast-channel' : 'storage-event',
-    self: true,
-  });
-}
+syncState.lastPublishedPointerCid = 'bafy-published';
+syncState.lastImportedPointerCid = 'bafy-imported';
+syncState.lastMessage = '已从公告板同步，新增 2 条';
+assert.match(syncState.lastMessage, /同步|新增/, '同步状态文案应可表达导入结果');
 
-function dashboardState() {
-  const activeNodeCount = state.knownNodes.size;
-  const hasLocalTransport = !!state.p2pChannel || state.p2pNode;
-  return hasLocalTransport ? (activeNodeCount > 1 ? '已连接' : '在线') : '离线';
-}
-
-syncKnownNodes();
-assert.equal(state.knownNodes.size, 1, '单页面启动后应至少注册自身节点');
-assert.equal(state.knownNodes.get('self-node')?.self, true, '自身节点应标记为 self');
-assert.equal(dashboardState(), '在线', '单节点本地通道可用时，状态应显示在线');
-
-state.knownNodes.set('peer-1', { lastSeen: nowMs(), transport: 'broadcast-channel' });
-assert.equal(dashboardState(), '已连接', '存在其他活动节点时，状态应显示已连接');
-
-console.log('p2p-local-state: ok');
+console.log('community-sync local state: ok');
 
