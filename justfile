@@ -29,3 +29,8 @@ check:
     test -f config.json
     test -f frontend/ipfs-client.js
     @echo "OK"
+
+test:
+    @echo "Running tests..."
+    node --test test/*.mjs
+    @echo "Tests passed!"

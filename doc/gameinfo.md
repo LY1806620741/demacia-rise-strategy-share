@@ -593,13 +593,13 @@ https://ddragon.leagueoflegends.com/cdn/16.6.1/data/zh_CN/champion.json
 
 ## 第五章
 1. 鹰石镇
-敌方阵营:雪人*2,部落展示*15,巨魔*3
+敌方阵营:雪人*2,部落战士*15,巨魔*3
 阵容: 天使,士兵,盖伦,莫甘娜,加里奥,士兵,士兵
 研究: 需要首都4级前所有战斗研究,战场扩增,盖伦,在密银城建造军需官.可选精锐盖伦,精锐加里奥,战斗领导术
 诀窍: 前排扛住,莫甘娜输出,增加伤害,如果有精锐盖伦,可以在战斗开始时就绪技能,更快进入战斗状态
 
 2. 黎明要塞
-敌方阵营: 龙蜥*4,诺克萨斯士兵*43
+敌方阵营: 龙蜥*4,诺克萨斯步兵*43
 阵容: 盖伦,加里奥,士兵,游侠,游侠,莫甘娜,天使
 研究: 需要首都4级前所有战斗研究,战场扩增,精锐盖伦,劲弩突破,无畏先锋,可选战斗领导术
 诀窍: 莫甘娜主力,前排顶住,游侠处理龙蜥,莫甘娜活到最后
@@ -611,25 +611,12 @@ https://ddragon.leagueoflegends.com/cdn/16.6.1/data/zh_CN/champion.json
 诀窍: 莫甘娜处理大量龙犬,游侠处理精锐石甲虫,前排顶住,莫甘娜活到最后
 
 4. 第五章最终任务-诺克萨斯敌袭
-敌方阵容: 龙蜥*2,诺克萨斯龙犬*12,诺克萨斯士兵*15
+敌方阵容: 龙蜥*2,诺克萨斯龙犬*12,诺克萨斯步兵*15
 阵容: 加里奥,盖伦,游侠,士兵,弓兵,卫兵,弓兵
 研究: 需要首都4级前所有战斗研究,战场扩增,精锐盖伦,劲弩突破,无畏先锋,可选战斗领导术
-诀窍: 游侠处理掉龙溪,弓箭手活到最后
+诀窍: 游侠处理掉龙蜥,弓箭手活到最后
 说明: 卫兵可换莫甘娜
 
 ## 第六章
 1. 第六章敌袭击
-诺厄萨斯步兵*9,诺克萨斯战斗法师*7,龙蜥*1
-
-# 资源文件
-
-语音: 英雄联盟\LeagueClient\Plugins\rcp-fe-lol-navigation\assets.wad\File3679.ogg File3697.ogg File0263.ogg中文
-rcp-fe-lol-navigation\global\default\opal\streamingassets\vo\zh_cn
-
-标题text: rcp-fe-lol-navigation\global\zh_cn\trans-activity-center.json "amg_title": "德玛西亚的崛起",
-
-工程文件: rcp-fe-lol-navigation\global\default\opal
-英雄兵种资源: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\combat_vfx_assets_all.bundle
-地图建筑资源: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\map_buildings_assets_all.
-中翻文字:rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\localization-string-tables-chinese(simplified)(zh-cn)_assets_all.bundle
-兵种敌人图标: rcp-fe-lol-navigation\global\default\opal\streamingassets\aa\webgl\defaultlocalgroup_assets_all.bundle
+诺克萨斯步兵*9,诺克萨斯战斗法师*7,龙蜥*1

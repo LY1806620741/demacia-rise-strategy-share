@@ -3,6 +3,19 @@ import { byId, escapeHtml } from './utils.js';
 import { getAllEnemyUnits } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 
+const LINEUP_ALIASES = new Map([
+  ['诺克萨斯士兵', '诺克萨斯步兵'],
+  ['诺克萨斯步兵', '诺克萨斯步兵'],
+  ['精锐石甲虫', '精锐石甲虫'],
+  ['精锐巨魔', '精锐巨魔'],
+  ['残渊雪人', '残渊雪人'],
+  ['亚龙', '云霄亚龙'],
+  ['特殊雪人', '残渊雪人'],
+  ['巨魔精锐', '精锐巨魔'],
+  ['石甲', '石甲虫'],
+  ['无畏先锋', '士兵'],
+]);
+
 export function formatLineup(items) {
   return items.map(item => `${item.name} x${item.count}`).join(', ');
 }
@@ -11,14 +24,19 @@ export function getEnemyUnitPool() {
   return getAllEnemyUnits();
 }
 
+function resolveEnemyAlias(name) {
+  return LINEUP_ALIASES.get(name) || name;
+}
+
 export function normalizeLineupToken(token) {
   const normalized = (token || '').trim().replace(/^[\[\]()（）]+|[\[\]()（）]+$/g, '');
   if (!normalized) return '';
-  return normalized.toLowerCase()
+  const name = normalized.toLowerCase()
     .replace(/[\s]*([x×*])[\s]*\d+$/i, '')
     .replace(/[\s]+\d+$/i, '')
     .replace(/^[+＋*×:：]+|[+＋*×:：]+$/g, '')
     .trim();
+  return resolveEnemyAlias(name);
 }
 
 export function parseLineupCount(token) {
@@ -54,7 +72,11 @@ export function parseLineupText(text, pool = getEnemyUnitPool()) {
       const rawName = normalizeLineupToken(chunk);
       const count = parseLineupCount(chunk);
       if (!rawName) return;
-      const unit = pool.find(item => item.name === rawName || item.id === rawName);
+      const unit = pool.find(item => {
+        const names = [item.name, item.id, ...(Array.isArray(item.aliases) ? item.aliases : [])]
+          .map(value => String(value || '').toLowerCase());
+        return names.includes(rawName);
+      });
       const key = unit?.id || rawName;
       const current = merged.get(key) || { id: key, name: unit?.name || rawName, count: 0, description: unit?.description || '' };
       current.count += count;

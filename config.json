@@ -13,23 +13,26 @@
     "demacia": [
       { "id": "ranger", "name": "游侠", "type": "ranged", "description": "弩手射速较慢，但能精准狙击大型目标并造成高额伤害。", "isHero": false },
       { "id": "guard", "name": "卫兵", "type": "melee", "description": "握持长枪的卫兵组成的小队，擅长对抗小规模敌人。", "isHero": false },
-      { "id": "soldier", "name": "士兵", "type": "melee", "description": "前线战士，使用剑与盾，能够轻松阻拦敌人。", "isHero": false },
+      { "id": "soldier", "name": "士兵", "type": "melee", "description": "前线战士，使用剑与盾，能够轻松阻拦敌人。", "isHero": false, "aliases": ["无畏先锋"] },
       { "id": "archer", "name": "弓兵", "type": "ranged", "description": "一队弓兵，能够稳定输出高额的伤害。", "isHero": false },
-      { "id": "vanguard", "name": "无畏先锋", "type": "melee", "description": "士兵的精锐升级形态，具备更高的伤害与生存能力。", "isHero": false },
       { "id": "dragonguard_knight", "name": "龙禽骑士", "type": "ranged", "description": "能俯冲攻击敌人并造成高额伤害的特殊精锐单位。", "isHero": false }
     ]
   },
   "enemies": [
-    { "id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "步兵是诺克萨斯大军中的骨干，其实力与德玛西亚卫兵相当。" },
-    { "id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "诺克萨斯战斗法师擅长从远距离投掷火球，造成范围伤害。他们依靠前排掩护作战，要想接近他们，就必须突破敌方阵线。" },
-    { "id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "龙蜥以远程单位为攻击目标，但移动速度极其缓慢。游侠的十字弩能射穿其护甲。" },
-    { "id": "noxian_drakehound", "name": "诺克萨斯龙犬", "type": "melee", "category": "noxus", "description": "训练有素的诺克萨斯龙犬速度极快，能够闪避部分远程攻击并直扑后排。" },
-    { "id": "noxian_mauler", "name": "诺克萨斯重击兵", "type": "melee", "category": "noxus", "description": "诺克萨斯重击兵装备重甲，生命值降至一半后会进入狂暴状态，大幅提升攻击速度。" },
-    { "id": "tribal_warrior", "name": "部落战士", "type": "melee", "category": "wild", "description": "部落战士会优先突袭远程单位，适合通过厚实前排或控制手段限制。" },
-    { "id": "troll", "name": "巨魔", "type": "ranged", "category": "wild", "description": "巨魔会掷出飞斧，对单体目标造成高额远程伤害。" },
-    { "id": "yeti", "name": "雪人", "type": "ranged", "category": "wild", "description": "雪人会投掷巨石，对范围内单位造成高额范围伤害。" },
-    { "id": "krug", "name": "石甲虫", "type": "melee", "category": "wild", "description": "石甲虫对近战伤害有明显减免，更适合用远程单位处理。" },
-    { "id": "drakehound", "name": "龙犬", "type": "melee", "category": "wild", "description": "龙犬常成群出没，突进迅猛，擅长快速撕开薄弱阵线。" }
+    { "id": "cloud_drake", "name": "云霄亚龙", "type": "melee", "category": "wild", "description": "一条巨龙。可发起狠毒的啃咬，还能召唤猛烈刺骨的烈风，可轻易撕裂轻甲单位。", "aliases": ["亚龙"] },
+    { "id": "noxian_infantry", "name": "诺克萨斯步兵", "type": "melee", "category": "noxus", "description": "诺克萨斯大军中的骨干，其实力与德玛西亚卫兵相当。", "aliases": ["诺克萨斯士兵"] },
+    { "id": "noxian_battlemage", "name": "诺克萨斯战斗法师", "type": "ranged", "category": "noxus", "description": "擅长从远距离投掷火球，造成范围伤害。他们依靠前排掩护作战——要想接近他们，就必须突破敌方阵线。" },
+    { "id": "basilisk", "name": "龙蜥", "type": "melee", "category": "noxus", "description": "以远程单位为攻击目标，但移动速度极其缓慢。游侠的十字弩能射穿其护甲。" },
+    { "id": "noxian_drakehound", "name": "诺克萨斯龙犬", "type": "melee", "category": "noxus", "description": "训练有素的龙犬跑得比野犬还快，能轻松闪避远程攻击。" },
+    { "id": "noxian_mauler", "name": "诺克萨斯重击兵", "type": "melee", "category": "noxus", "description": "配备重甲的危险存在。生命值降至一半时，会陷入狂暴状态，攻击速度大幅提升。" },
+    { "id": "tribal_warrior", "name": "部落战士", "type": "melee", "category": "wild", "description": "会瞄准远程单位，发动迅猛且极具毁灭性的近战攻击。" },
+    { "id": "troll", "name": "巨魔", "type": "ranged", "category": "wild", "description": "会掷出夺命飞斧，对挡道的敌人造成高额单体伤害。" },
+    { "id": "elite_troll", "name": "精锐巨魔", "type": "ranged", "category": "wild", "description": "身经百战的危险巨魔。其能造成巨大远程伤害，且生命值远超普通巨魔。", "aliases": ["巨魔精锐"] },
+    { "id": "yeti", "name": "雪人", "type": "ranged", "category": "wild", "description": "会扔出巨石，对周围单位造成高额范围伤害。" },
+    { "id": "abyssal_yeti", "name": "残渊雪人", "type": "ranged", "category": "wild", "description": "使用臻冰巨石当作武器，每次攻击都会造成巨大伤害。", "aliases": ["特殊雪人"] },
+    { "id": "elite_krug", "name": "精锐石甲虫", "type": "melee", "category": "wild", "description": "体型巨大的敌方石甲虫。用远程武器攻击其弱点可造成巨大伤害。其攻击力和生命值都高于普通石甲虫。" },
+    { "id": "krug", "name": "石甲虫", "type": "melee", "category": "wild", "description": "对近战的攻击伤害有大幅减免。", "aliases": ["石甲"] },
+    { "id": "drakehound", "name": "龙犬", "type": "melee", "category": "wild", "description": "常常成群结队出没，是迅猛的猎手。" }
   ],
   "enemy_compositions": [
     {
@@ -223,9 +226,9 @@
         {
           "wave_id": "dawn_fort_noxus_siege",
           "label": "第五章 · 黎明要塞",
-          "incoming_enemy_text": "龙蜥*4，诺克萨斯士兵*43",
+          "incoming_enemy_text": "龙蜥*4，诺克萨斯步兵*43",
           "recommended_lineup_text": "盖伦、加里奥、士兵、游侠、游侠、莫甘娜、天使",
-          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、无畏先锋",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、士兵升级（无畏先锋）",
           "optional_tech_text": "可选战斗领导术",
           "tactic": "莫甘娜主力，前排顶住，游侠处理龙蜥，莫甘娜活到最后"
         }
@@ -242,7 +245,7 @@
           "label": "第五章 · 福斯拜罗",
           "incoming_enemy_text": "精锐石甲虫*2，龙犬*40，石甲虫*8",
           "recommended_lineup_text": "莫甘娜、游侠、士兵、士兵、加里奥、盖伦、游侠",
-          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、无畏先锋、在密银城建造军需官",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、士兵升级（无畏先锋）、在密银城建造军需官",
           "optional_tech_text": "可选劲弩突破、战斗领导术、精锐加里奥",
           "tactic": "莫甘娜处理大量龙犬，游侠处理精锐石甲虫，前排顶住，莫甘娜活到最后"
         }
@@ -257,9 +260,9 @@
         {
           "wave_id": "chapter5_final_noxus_assault",
           "label": "第五章 · 诺克萨斯敌袭",
-          "incoming_enemy_text": "龙蜥*2，诺克萨斯龙犬*12，诺克萨斯士兵*15",
+          "incoming_enemy_text": "龙蜥*2，诺克萨斯龙犬*12，诺克萨斯步兵*15",
           "recommended_lineup_text": "加里奥、盖伦、游侠、士兵、弓兵、卫兵、弓兵",
-          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、无畏先锋",
+          "required_tech_text": "需要首都4级前所有战斗研究、战场扩增、精锐盖伦、劲弩突破、士兵升级（无畏先锋）",
           "optional_tech_text": "可选战斗领导术",
           "tactic": "游侠处理掉龙蜥，弓箭手活到最后",
           "notes": "卫兵可换莫甘娜"
