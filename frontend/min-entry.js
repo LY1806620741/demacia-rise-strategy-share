@@ -3,14 +3,15 @@ import { byId, debounce, nowMs } from './utils.js';
 import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
 import { renderEnemyEditor, handleEnemyTextInput, addEnemyUnit as addEnemyUnitToQueue, changeEnemyUnitCount as changeEnemyUnitCountInQueue, removeEnemyUnit as removeEnemyUnitFromQueue } from './enemy-lineup.js';
 import { searchByEnemyLineup as searchEnemyRecommendations } from './enemy-search.js';
-import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults, renderIpfsStatus } from './view-renderers.js';
+import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderSearchResults, renderIpfsStatus, renderCommunityIndexStatus } from './view-renderers.js';
 import {
   renderCommunityLineups,
   submitBattleStrategy as submitCommunityStrategy,
   get_strategies,
   create_strategy,
   recommend_strategies_for_enemy,
-  vote
+  vote,
+  syncLocalStrategies
 } from './community-strategy.js';
 import {
   uploadCommunityStrategy,
@@ -21,8 +22,20 @@ import {
   getFavorites,
   searchStrategies
 } from './ipfs-client.js';
+import {
+  loadLocalIndex,
+  saveLocalIndex,
+  appendIndexItem,
+  publishIndexPointer,
+  importIndexFromPointer,
+  exportIndexText,
+  importIndexText,
+  resolveIndexedStrategies,
+  getLastPointerCid
+} from './community-index.js';
 
 const hasOwn = (obj, key) => Object.hasOwn(obj, key);
+let communityIndex = loadLocalIndex();
 
 function safeRender(label, fn) {
   try {
@@ -32,11 +45,17 @@ function safeRender(label, fn) {
   }
 }
 
+async function refreshStrategiesFromIndex(message = '') {
+  const strategies = await resolveIndexedStrategies(communityIndex);
+  syncLocalStrategies(strategies);
+  renderCommunity();
+  renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message);
+}
+
 function renderCommunity() {
   renderCommunityLineups(get_strategies, {
     onRendered: () => {
       updateDashboard({ state, getStrategies: get_strategies });
-      // 强制刷新社区策略数
       const communityCount = document.getElementById('community-strategy-count');
       if (communityCount) communityCount.textContent = String(get_strategies().length);
     },
@@ -45,7 +64,7 @@ function renderCommunity() {
 
 function renderSearch() {
   renderSearchResults({
-    searchFn: searchCommunity, // 用本地实现的搜索函数
+    searchFn: searchCommunity,
     scopeValue: byId('search-scope')?.value,
     queryValue: byId('q')?.value,
     limitValue: byId('similarity-result-limit')?.value,
@@ -115,15 +134,58 @@ function setupSearchBindings() {
   byId('search-scope')?.addEventListener('change', renderSearch);
 }
 
-// 拉取社区策略
-async function loadCommunityStrategies(cidList) {
-  return await fetchCommunityStrategies(cidList);
+function setupCommunityIndexBindings() {
+  byId('community-index-import-input')?.addEventListener('change', async event => {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const result = importIndexText(text);
+    communityIndex = result.index;
+    await refreshStrategiesFromIndex(`已导入索引，新增 ${result.added} 条`);
+    event.target.value = '';
+  });
 }
-// 收藏/取消收藏
-function favoriteStrategy(cid) { addFavorite(cid); }
-function unfavoriteStrategy(cid) { removeFavorite(cid); }
-function getFavoriteStrategies() { return getFavorites(); }
-// 搜索社区策略
+
+async function syncCommunityIndexFromPointer() {
+  const pointerCid = byId('community-index-pointer-input')?.value?.trim();
+  if (!pointerCid) {
+    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '请先输入指针 CID');
+    return;
+  }
+  try {
+    const result = await importIndexFromPointer(pointerCid);
+    communityIndex = result.index;
+    await refreshStrategiesFromIndex(`已从公告板同步，新增 ${result.added} 条`);
+  } catch (error) {
+    console.error('failed to sync community index from pointer', error);
+    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：指针无效或远端索引不可读');
+  }
+}
+
+async function publishCommunityIndexPointer() {
+  try {
+    const result = await publishIndexPointer(communityIndex);
+    communityIndex = result.index;
+    const input = byId('community-index-pointer-input');
+    if (input) input.value = result.cid;
+    renderCommunityIndexStatus(communityIndex, result.cid, '本地索引已发布到公告板 CID');
+  } catch (error) {
+    console.error('failed to publish community index pointer', error);
+    renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '发布索引失败');
+  }
+}
+
+function exportCommunityIndex() {
+  const blob = new Blob([exportIndexText(communityIndex)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'community_index.json';
+  link.click();
+  URL.revokeObjectURL(url);
+  renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '已导出本地索引');
+}
+
 function searchCommunity(keyword, strategies) {
   return searchStrategies(strategies, keyword);
 }
@@ -140,21 +202,29 @@ function submitBattleStrategy() {
     renderEnemyEditor,
     renderCounterSelection: () => renderCounterSelection(state.selectedCounterUnits),
     renderBattleTechOptions,
+    onCreated: async created => {
+      communityIndex = appendIndexItem(communityIndex, {
+        cid: created.cid,
+        addedAt: created.createdAt,
+        title: created.title,
+        target: created.target,
+      });
+      saveLocalIndex(communityIndex);
+      await refreshStrategiesFromIndex('已写入本地索引，可继续发布索引 CID 给其他人');
+    },
   });
 }
 
-function init() {
-  // 移除所有与p2pNode、p2p、broadcastEnvelope、swarm相关的代码和调用
-}
-
-// 直接用前端初始化流程
 (async function main() {
   if (!state.selectedCounterUnits) state.selectedCounterUnits = [];
   await loadConfig();
+  const pointerInput = byId('community-index-pointer-input');
+  if (pointerInput) pointerInput.value = getLastPointerCid();
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
   safeRender('setupCounterUnitSelection', () => setupCounterUnitSelection(addCounterUnit));
   safeRender('setupSearchBindings', () => setupSearchBindings());
+  safeRender('setupCommunityIndexBindings', () => setupCommunityIndexBindings());
   safeRender('renderEditorTips', () => renderEditorTips());
   safeRender('renderBattleTechOptions', () => renderBattleTechOptions());
   safeRender('renderEnemyUnitList', () => renderEnemyUnitList());
@@ -162,12 +232,24 @@ function init() {
   safeRender('renderCounterSelection', () => renderCounterSelection(state.selectedCounterUnits));
   safeRender('renderOfficialLineups', () => renderOfficialLineups());
   safeRender('renderHeroList', () => renderHeroList());
-  safeRender('renderCommunityLineups', () => renderCommunity());
   safeRender('renderSearchResults', () => renderSearch());
   updateDashboard({ state, getStrategies: get_strategies });
   safeRender('renderIpfsStatus', () => renderIpfsStatus());
+  await refreshStrategiesFromIndex('本地索引已加载');
 })();
 
 globalThis.__frontendModules = { state, byId, debounce, nowMs, loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection };
-
-Object.assign(globalThis, { switchTab, addEnemyUnit, changeEnemyUnitCount, removeEnemyUnit, removeCounterUnit, submitBattleStrategy, searchByEnemyLineup, voteStrategy, voteOnStrategy });
+Object.assign(globalThis, {
+  switchTab,
+  addEnemyUnit,
+  changeEnemyUnitCount,
+  removeEnemyUnit,
+  removeCounterUnit,
+  submitBattleStrategy,
+  searchByEnemyLineup,
+  voteStrategy,
+  voteOnStrategy,
+  syncCommunityIndexFromPointer,
+  publishCommunityIndexPointer,
+  exportCommunityIndex,
+});

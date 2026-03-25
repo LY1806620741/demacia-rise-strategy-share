@@ -2,36 +2,30 @@
 
 default: serve
 
-# 清理构建产物
+# 清理本地静态服务/临时产物
 clean:
-    cargo clean
-    rm -rf pkg/
     rm -rf dist/
 
-# 安装依赖（首次运行用）
+# 安装本地静态服务依赖（首次运行用）
 deps:
-    cargo install wasm-pack
     npm install -g serve
 
-# 编译 WASM（核心命令）
+# 纯前端项目无需编译，保留占位检查
 build:
-    wasm-pack build --target web --out-name demacia_rise --out-dir pkg
+    @echo "No build step required. Static frontend + Helia CDN."
 
-# 编译 + 优化（发布用）
-build-release:
-    wasm-pack build --target web --out-name demacia_rise --out-dir pkg --release
-
-# 启动本地网页服务（localhost:3000）
+# 启动本地网页服务（localhost:8000）
 serve:
     serve -l 8000
 
-# 一键发布流程（clean → build → serve）
-release: clean build-release serve
+# 一键预览流程（clean → build → serve）
+release: clean build serve
 
-# 格式化代码
-fmt:
-    cargo fmt
-
-# 代码检查
+# 基础项目检查
 check:
-    cargo check
+    @echo "Checking static frontend files..."
+    test -f index.html
+    test -f app.js
+    test -f config.json
+    test -f frontend/ipfs-client.js
+    @echo "OK"

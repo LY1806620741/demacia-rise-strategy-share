@@ -38,9 +38,8 @@ export function renderCommunityLineups(getStrategies, { onRendered, onVote } = {
 }
 
 // 提交社区策略
-export async function submitBattleStrategy({ state, createStrategy, nowMs, getSelectedTechNames, renderCommunityLineups, searchByEnemyLineup, updateDashboard, renderEnemyEditor, renderCounterSelection, renderBattleTechOptions }) {
+export async function submitBattleStrategy({ state, createStrategy, nowMs, getSelectedTechNames, renderCommunityLineups, searchByEnemyLineup, updateDashboard, renderEnemyEditor, renderCounterSelection, renderBattleTechOptions, onCreated }) {
   const strategyObj = {
-    // 这里根据实际表单/状态结构组织数据
     id: 'strategy-' + nowMs(),
     title: state.strategyTitle || '',
     notes: state.strategyNotes || '',
@@ -51,11 +50,13 @@ export async function submitBattleStrategy({ state, createStrategy, nowMs, getSe
     likes: 0,
     dislikes: 0
   };
-  const cid = await uploadCommunityStrategy(strategyObj);
+  const cid = await createStrategy(strategyObj);
+  const created = { ...strategyObj, cid };
+  onCreated?.(created);
   alert('社区策略已上传，CID: ' + cid);
-  // 可选：推送到公告板/索引
   renderCommunityLineups();
   updateDashboard();
+  return created;
 }
 
 // 拉取社区策略（传入CID列表）

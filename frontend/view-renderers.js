@@ -102,3 +102,13 @@ export async function renderIpfsStatus() {
     container.innerHTML = '<span style="color:#f66;">IPFS 节点初始化失败</span>';
   }
 }
+
+export function renderCommunityIndexStatus(index, pointerCid = '', message = '') {
+  const container = byId('community-index-status');
+  if (!container) return;
+  const itemCount = Array.isArray(index?.items) ? index.items.length : 0;
+  const updatedAt = index?.updatedAt ? new Date(index.updatedAt).toLocaleString() : '未记录';
+  const pointerLine = pointerCid ? `指针 CID：<span style="word-break:break-all;">${escapeHtml(pointerCid)}</span><br>` : '';
+  const messageLine = message ? `<div style="margin-top:.35rem;color:#9fd3ff;">${escapeHtml(message)}</div>` : '';
+  container.innerHTML = `本地索引条目：${itemCount}<br>${pointerLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
+}

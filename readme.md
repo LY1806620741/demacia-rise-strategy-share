@@ -1,251 +1,310 @@
-# 英雄联盟：德玛西亚的崛起 - 策略模拟器
-### (League of Legends: Rise of Demacia - Strategy Simulator)
+# League of Legends Demacia Rise Sim
 
-> **版本**: 0.1.0 (Alpha)  
-> **状态**: 社区驱动开发 (Community Driven)  
-> **核心理念**: 官方定基准，社区定策略。数据永不丢失，智慧共同进化。
+![Status](https://img.shields.io/badge/status-experimental-blue)
+![Frontend](https://img.shields.io/badge/frontend-vanilla%20js%20%2B%20html%20%2B%20css-brightgreen)
+![Storage](https://img.shields.io/badge/storage-Helia%20%2B%20IPFS-orange)
+![Deployment](https://img.shields.io/badge/deploy-static%20hosting%20friendly-purple)
 
----
+一个面向《德玛西亚崛起》战斗编排场景的纯前端策略模拟与社区协作工具。
 
-## 🛡️ 项目简介
-
-**“德玛西亚的崛起”** 是一个基于 Web 的开源策略模拟引擎，专为《英雄联盟》德玛西亚阵营的粉丝、战术分析师和游戏玩家设计。本项目不依赖中心化的游戏服务器，而是采用独特的 **“Git + P2P” 混合架构**：
-
-1.  **官方基准数据 (Official Baseline)**：由核心开发者维护，通过 GitHub 发布最准确的英雄属性、技能机制、建筑科技树和基础资源模型。保证模拟器的**准确性**和**一致性**。
-2.  **野生策略数据 (Wild Strategies)**：由全球用户分布式贡献。包括针对特定阵容的**最小应对方案**、**极限运营路线**、**黑科技打法**等。
-3.  **共识机制 (Consensus via Likes)**：用户通过“点赞”为策略投票。高赞策略会自动在所有人的模拟器中**权重提升**、**置顶显示**，甚至被标记为“德玛西亚推奨战术”。低质或过时策略会自动沉底。
-
-**无需注册，无需服务器，打开网页即可体验德玛西亚的荣光！**
+它将 **官方配置数据**、**敌人阵容编辑**、**社区策略发布** 和 **Helia/IPFS 社区索引同步** 组合到一个无需后端的静态 Web 应用中。
 
 ---
 
-## ⚔️ 核心功能模块
+## Why This Project
 
-### 1. 资源模拟系统 (Resource Simulation)
-模拟德玛西亚王国的经济与发展体系。
-- **资源类型**: 金币 (Gold), 人口 (Population), 光盾素材 (Petricite), 军备值 (Munitions).
-- **建筑科技树**: 
-  - 基础：农场、兵营、采石场。
-  - 进阶：光盾实验室、骑士训练场、禁魔雕像。
-  - **野生扩展**: 用户可以提交新的建筑组合方案（例如：“速冲流：跳过农场，直接暴兵”），经社区点赞后成为可选科技路线。
-- **动态事件**: 模拟诺克萨斯入侵、法师叛乱等随机事件对资源的影响。
+这个项目主要解决三个实际问题：
 
-### 2. 战斗模拟系统 (Combat Simulation)
-基于回合制或即时演算的战斗引擎。
-- **阵容构建**: 选择盖伦、拉克丝、嘉文四世等英雄，搭配士兵类型。
-- **战术指令**: 设置集火目标、撤退阈值、技能释放时机。
-- **对抗推演**: 
-  - **PVE**: 对抗预设的诺克萨斯或暗影岛 AI。
-  - **PVP (异步)**: 上传自己的阵容配置，与其他玩家的配置进行离线模拟对战。
-- **野生对策库**: 
-  - *场景*: “如何用最少的兵力击败‘蔚 + 塞拉斯’的切入阵容？”
-  - *方案*: 用户提交具体站位和出装，社区点赞验证有效性。高赞方案将作为“标准答案”推荐给所有遇到该困境的玩家。
+1. 官方阵容、研究和敌人信息分散，不方便快速检索
+2. 玩家很难把“敌人阵容 → 应对阵容 → 研究 → 诀窍”沉淀成可复用方案
+3. 在没有后端服务的前提下，社区内容仍然需要一种可分享、可同步的协作方式
+
+因此，项目选择了：
+
+- **静态前端部署**
+- **配置驱动的官方数据结构**
+- **浏览器端 Helia/IPFS 内容分发**
+- **基于指针 CID 的最小社区索引机制**
 
 ---
 
-## 🏗️ 技术架构
+## Features
 
-本项目采用 **Rust + WebAssembly (Wasm)** 构建核心逻辑，确保高性能与跨平台一致性；前端使用 **Leptos** 实现响应式 UI；数据存储采用 **GitHub (官方) + IndexedDB/P2P (用户)** 混合模式。
-
-### 架构图
-
-```mermaid
-graph TD
-    subgraph Official_Source ["官方数据源 (只读)"]
-        Git[GitHub Repository]
-        Dev[开发者手动发布]
-        Dev -->|Commit JSON | Git
-    end
-
-    subgraph Client_Engine ["用户浏览器 (Rust Wasm)"]
-        Wasm[Rust 计算引擎]
-        UI[Leptos 前端界面]
-        LocalDB[(IndexedDB)]
-        
-        Git -->|Fetch Base Data | Wasm
-        Wasm -->|Render | UI
-        Wasm <-->|Read/Write | LocalDB
-    end
-
-    subgraph Wild_Network ["野生数据网络 (P2P)"]
-        Peer1[用户 A]
-        Peer2[用户 B]
-        Peer3[用户 C]
-        
-        Peer1 <-->|Gossipsub: 同步点赞/新策略 | Peer2
-        Peer2 <-->|Gossipsub: 同步点赞/新策略 | Peer3
-        
-        Peer1 -->|存储本地策略 | LocalDB
-    end
-
-    subgraph Consensus [共识层]
-        Merger[数据合并器]
-        Scorer[权重计算器]
-        LocalDB --> Merger
-        Wild_Network --> Merger
-        Merger -->|Base + Delta | Scorer
-        Scorer -->|排序后的数据 | UI
-    end
-
-    style Official_Source fill:#e1f5fe,stroke:#01579b
-    style Client_Engine fill:#fff3e0,stroke:#e65100
-    style Wild_Network fill:#e8f5e9,stroke:#1b5e20
-    style Consensus fill:#f3e5f5,stroke:#4a148c
-```
-
-### 数据流说明
-
-1.  **初始化**: 页面加载时，Wasm 从 GitHub 拉取最新的 `official_data.json` (包含英雄基础数值、建筑成本等)。
-2.  **本地合并**: 从 IndexedDB 读取用户本地的“野生策略”和“点赞记录”。
-3.  **P2P 同步**: 加入 libp2p 网络，订阅 `demacia-strategies` 主题。接收其他节点广播的新策略或点赞更新。
-4.  **权重计算**: 
-    $$ Score = (IsOfficial ? 1000 : 0) + (Likes \times 1.0) - (Dislikes \times 2.0) + TimeDecay $$
-5.  **渲染**: UI 根据分数高低展示策略。官方数据永远可见，野生数据需达到一定分数才会高亮显示。
+- 官方阵容与城镇防守推荐浏览
+- 敌人阵容文本快速输入与相似策略搜索
+- 社区策略发布、浏览、点赞 / 点踩
+- 本地社区索引持久化
+- 公告板 / 指针 CID 同步社区索引
+- 社区索引导入 / 导出
+- 浏览器端 IPFS 节点状态展示
+- 纯静态部署，无需后端服务
 
 ---
 
-## 📂 项目结构
+## Demo Capabilities
+
+当前版本可完成的典型流程：
+
+- 输入敌人阵容，查看官方与社区相似策略
+- 发布一条新的社区策略到 Helia/IPFS
+- 自动将新内容写入本地社区索引
+- 将本地索引发布为新的“指针 CID”
+- 其他用户通过该指针 CID 合并并浏览社区内容
+
+---
+
+## Tech Stack
+
+- **Frontend**: Vanilla JavaScript + HTML + CSS
+- **Content Store**: Helia + UnixFS
+- **Local Persistence**: `localStorage`
+- **Deployment**: GitHub Pages / 任意静态文件服务器
+- **Data Source**: `config.json` + `doc/` 文档
+
+---
+
+## Architecture Overview
 
 ```text
-demacia-rise/
-├── Cargo.toml              # Rust 项目配置
-├── Trunk.toml              # Wasm 构建配置
-├── README.md               # 本文件
-├── data/                   # 官方数据源 (手动维护后推送到 GitHub)
-│   ├── official_heroes.json
-│   ├── official_buildings.json
-│   └── base_scenarios.json
-├── src/
-│   ├── main.rs             # 入口
-│   ├── app.rs              # UI 组件 (Leptos)
-│   ├── engine/
-│   │   ├── resource.rs     # 资源模拟逻辑
-│   │   ├── combat.rs       # 战斗模拟逻辑
-│   │   └── resolver.rs     # 策略求解器
-│   ├── data_model.rs       # 数据结构 (Official vs Wild)
-│   ├── storage.rs          # IndexedDB 操作
-│   ├── p2p.rs              # libp2p 节点逻辑
-│   └── consensus.rs        # 点赞权重算法
-├── tests/                  # 单元测试
-│   ├── combat_test.rs
-│   └── economy_test.rs
-└── docs/                   # 文档
-    └── contribution.md     # 如何提交野生数据
+Official Data (config.json / docs)
+            │
+            ▼
+  Static Frontend Application
+            │
+   ┌────────┴────────┐
+   │                 │
+   ▼                 ▼
+UI Rendering     Community Strategy Editing
+   │                 │
+   └────────┬────────┘
+            ▼
+     Local Community Index
+            │
+            ▼
+      Helia / IPFS Storage
+            │
+            ▼
+ Pointer CID / Bulletin-style Sharing
 ```
 
 ---
 
-## 🚀 快速开始
+## Project Status
 
-### 前置要求
-- Rust 工具链 (`rustup`)
-- `trunk` (用于构建 Wasm Web 应用)
-- 现代浏览器 (Chrome/Firefox/Edge)
+当前版本已经完成从旧的 Rust / WASM / libp2p 方案迁移到纯前端方案：
 
-### 本地运行
+- 已移除旧的 `ipfs-core`
+- 已迁移到 **Helia**
+- 已实现基础社区索引机制
+- 已支持通过“指针 CID”同步社区内容
 
-1.  **克隆项目**:
-    ```bash
-    git clone https://github.com/your-org/demacia-rise.git
-    cd demacia-rise
-    ```
-
-2.  **安装 Wasm 目标**:
-    ```bash
-    rustup target add wasm32-unknown-unknown
-    cargo install trunk
-    ```
-
-3.  **启动开发服务器**:
-    ```bash
-    trunk serve --open
-    ```
-    浏览器将自动打开，你将看到默认的官方数据。尝试点击“创建新策略”并点赞，刷新页面后数据依然存在（存储在 IndexedDB）。
-
-4.  **体验 P2P 同步**:
-    - 打开两个不同的浏览器窗口（或无痕模式）。
-    - 在一个窗口创建策略并点赞。
-    - 观察另一个窗口是否自动接收到更新（需在同一局域网或连接公共引导节点）。
+当前仍属于 **持续演进中的实验性版本**，尤其是浏览器网络传播与去中心化发现能力仍受浏览器运行环境限制。
 
 ---
 
-## 🤝 如何贡献 (野生数据)
+## Quick Start
 
-我们不需要你提交代码来分享你的战术！
-
-### 方式一：直接在应用中贡献 (推荐)
-1.  打开网页版模拟器。
-2.  进入“战术实验室”，配置你的阵容或建筑路线。
-3.  点击“发布到社区”。
-4.  你的策略会生成一个唯一的 ID，并通过 P2P 网络广播给其他在线用户。
-5.  **获得点赞**: 当足够多的用户验证并点赞你的策略时，它将成为“德玛西亚公认战术”，在所有用户的客户端中高亮显示。
-
-### 方式二：提交官方数据修正 (PR)
-如果你发现官方基础数据（如盖伦的基础攻击力）有误：
-1.  Fork 本仓库。
-2.  修改 `data/official_heroes.json`。
-3.  提交 Pull Request。
-4.  维护者合并后，所有用户下次刷新将自动获得修正后的基准数据。
+github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 
 ---
 
-## 📜 数据规范
+## Usage
 
-### 官方数据示例 (`official_heroes.json`)
-```json
-[
-  {
-    "id": "garen",
-    "name": "盖伦",
-    "hp": 620,
-    "attack": 66,
-    "role": "Tank/Fighter",
-    "abilities": ["decisive_strike", "courage", "judgment", "demacian_justice"]
-  }
-]
+### 浏览官方数据
+
+- 打开“官方阵容数据”页
+- 查看城镇防守推荐、英雄数据与研究说明
+
+### 发布社区策略
+
+1. 在“战斗策略编辑”页录入敌人阵容
+2. 选择应对单位和研究
+3. 填写策略描述
+4. 点击“发布社区战斗策略”
+5. 系统会把该策略上传到 Helia，并写入本地社区索引
+
+### 发布社区索引
+
+在“社区阵容数据”页：
+
+1. 点击“发布本地索引”
+2. 获得一个新的 **指针 CID / 公告板 CID**
+3. 将该 CID 分享给其他用户
+
+### 同步他人社区内容
+
+在“社区阵容数据”页：
+
+1. 将对方分享的指针 CID 粘贴到输入框
+2. 点击“同步索引”
+3. 页面会拉取远端索引并合并到本地
+4. 对应社区内容会被批量解析并显示
+
+### 导入 / 导出索引
+
+- 点击“导出索引”可下载本地索引 JSON
+- 点击“导入索引”可手动合并外部索引文件
+
+---
+
+## Browser-side IPFS / Helia Setup
+
+项目当前通过浏览器 ESM CDN 直接加载 Helia：
+
+- `https://cdn.jsdelivr.net/npm/helia@5.5.0/+esm`
+- `https://cdn.jsdelivr.net/npm/@helia/unixfs@3.0.0/+esm`
+- `https://cdn.jsdelivr.net/npm/multiformats@13.3.1/+esm`
+
+对应封装文件：
+
+- `frontend/ipfs-client.js`
+
+已支持的能力：
+
+- 社区策略上传：Helia UnixFS `addBytes`
+- 社区策略读取：Helia UnixFS `cat`
+- 节点状态展示：`peerId` + `multiaddrs`
+
+---
+
+## Project Structure
+
+```text
+.
+├── app.js                       # 前端入口
+├── app.css                      # 样式
+├── index.html                   # 页面结构
+├── config.json                  # 官方配置与基础数据
+├── justfile                     # 本地开发辅助命令
+├── need.md                      # 当前需求摘要
+├── readme.md                    # 项目说明
+├── doc/                         # 游戏资料与实现说明文档
+├── frontend/
+│   ├── community-index.js       # 社区索引机制
+│   ├── community-strategy.js    # 社区策略逻辑
+│   ├── config-ui.js             # 配置与编辑 UI
+│   ├── data.js                  # 数据读取封装
+│   ├── enemy-lineup.js          # 敌人阵容编辑
+│   ├── enemy-search.js          # 敌方相似策略搜索
+│   ├── ipfs-client.js           # Helia / IPFS 封装
+│   ├── min-entry.js             # 页面初始化与事件绑定
+│   ├── state.js                 # 前端状态
+│   ├── unit-tooltips.js         # 单位说明提示
+│   ├── utils.js                 # 工具函数
+│   └── view-renderers.js        # 各类渲染逻辑
+└── test/
+    └── community-index.test.mjs # 社区索引最小契约测试
 ```
 
-### 野生策略示例 (内部结构)
-```json
-{
-  "id": "uuid-v4-string",
-  "type": "counter_strategy",
-  "target_official_id": "sylas_composition",
-  "title": "针对塞拉斯的最低成本反制阵容",
-  "description": "使用拉克丝远程消耗，盖伦带净化，无需出魔抗装...",
-  "requirements": {
-    "buildings": ["light_shield_lab"],
-    "tech_level": 2
-  },
-  "creator_peer": "QmPeerID...",
-  "likes": 145,
-  "dislikes": 3,
-  "timestamp": 1710500000
-}
+---
+
+## Data Sources
+
+项目中的主要内容来源如下：
+
+- `config.json`
+  - 官方英雄、单位、建筑、研究树、敌方组合、城镇推荐
+- `doc/gameinfo.md`
+  - 已确认的游戏文本与推荐依据
+- `need.md`
+  - 当前需求重点与上下文摘要
+
+如果你要继续扩展推荐规则、官方阵容或搜索逻辑，优先检查这三个入口。
+
+---
+
+## Limitations
+
+当前架构仍有几个现实限制：
+
+1. 浏览器端 Helia 的内容传播能力受浏览器网络环境限制
+2. 社区内容发现目前依赖“索引 CID / 公告板 CID”的传播
+3. 没有中心化后端，因此不存在自动全网公告板更新
+4. 不同浏览器、不同网络环境下的节点可达性可能不同
+
+换句话说：
+
+- **内容存储可以去中心化**
+- **内容发现目前仍需要人为传播索引 CID，或额外的命名/公告板层**
+
+---
+
+## FAQ
+
+### 这是一个纯前端项目吗？
+
+是。当前版本不依赖自建后端，主要依靠静态资源、配置文件、本地存储和浏览器端 Helia/IPFS。
+
+### 社区内容会自动被所有节点发现吗？
+
+不会。当前版本已经支持通过“指针 CID”同步社区索引，但**索引 CID 仍需要被分享**，还没有实现全自动的全网发现。
+
+### 为什么不用传统数据库？
+
+项目目标之一就是在无后端条件下，探索社区内容共享与浏览的最小可行路径。
+
+### 适合部署到哪里？
+
+适合部署到 GitHub Pages、Netlify、Vercel 静态站点，或任意本地静态文件服务器。
+
+---
+
+## Roadmap
+
+- [x] 从 `ipfs-core` 迁移到 Helia
+- [x] 社区索引本地持久化
+- [x] 指针 CID 同步与索引导入导出
+- [ ] 多公告板订阅列表
+- [ ] 自动合并多个指针来源
+- [ ] 更强的社区搜索排序
+- [ ] 更稳定的浏览器端内容传播策略
+- [ ] 更完整的社区策略元数据结构
+
+---
+
+## Development Notes
+
+当前推荐的开发方式：
+
+```bash
+just check
+just serve
 ```
 
----
+或：
 
-## 🔮 路线图 (Roadmap)
+```bash
+python3 -m http.server 8080
+```
 
-- [ ] **Phase 1 (当前)**: 核心资源与战斗模拟引擎，GitHub 数据同步，本地存储。
-- [ ] **Phase 2**: 集成 libp2p，实现浏览器间的策略与点赞同步。
-- [ ] **Phase 3**: 引入信誉系统，防止刷赞；增加更多德玛西亚英雄与剧情事件。
-- [ ] **Phase 4**: 支持移动端 PWA，离线可用；导出/导入策略分享码。
-- [ ] **Phase 5**: 社区锦标赛模式，自动匹配最佳野生策略进行 AI 对战。
+如果你在修改社区索引逻辑，建议先验证：
 
----
-
-## ⚖️ 许可证
-
-- **代码**: MIT License
-- **官方数据**: CC BY-NC-SA 4.0 (非商业性使用，共享相同方式)
-- **野生数据**: 归创作者所有，但在本网络中传播即视为同意 CC BY-SA 协议。
+- 发布策略后本地索引是否追加
+- 发布索引后是否生成新的指针 CID
+- 通过其他指针 CID 是否能成功合并索引
+- 社区列表和侧边计数是否同步刷新
 
 ---
 
-## 📢 免责声明
+## Contributing
 
-本项目是粉丝制作的非官方工具，与 Riot Games 无关。《英雄联盟》及其所有相关属性均为 Riot Games, Inc 的商标。我们热爱德玛西亚，也尊重符文之地的所有规则。
+欢迎提交 Issue 或 Pull Request。
 
-**为了德玛西亚！(For Demacia!)** 🛡️🦁
+建议贡献方向：
+
+- 战略数据完善
+- 社区索引同步体验优化
+- 搜索与推荐排序算法
+- UI / UX 改进
+- 文档完善
+- 浏览器兼容性修复
+
+在提交较大改动前，建议先在 `need.md` 或 Issue 中说明目标和范围。
+
+---
+
+## Acknowledgements
+
+- Helia
+- IPFS / UnixFS
+- 游戏内容资料与社区策略整理贡献者
