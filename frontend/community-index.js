@@ -1,9 +1,10 @@
-import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid } from './ipfs-client.js';
+import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid, fetchIpnsJson } from './ipfs-client.js';
 import { state } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
 const LAST_POINTER_KEY = 'community_index_last_pointer_cid';
 const KNOWN_POINTERS_KEY = 'community_index_known_pointers_v1';
+const POINTER_BOARD_PATH = './community-pointer.json';
 
 export function createEmptyIndex() {
   return {
@@ -34,8 +35,67 @@ function getConfiguredDefaultPointers() {
   return Array.isArray(configured) ? configured.map(value => String(value || '')).filter(Boolean) : [];
 }
 
-export function getKnownPointerCids() {
-  return [...new Set([...getConfiguredDefaultPointers(), ...loadKnownPointers()])];
+function getConfiguredIpnsName() {
+  return String(state?.config?.community?.default_ipns_name || '').trim();
+}
+
+function normalizePointerBoard(raw = {}, source = POINTER_BOARD_PATH, extra = {}) {
+  const current = String(raw?.current_pointer_cid || '').trim();
+  const fallback = Array.isArray(raw?.fallback_pointer_cids)
+    ? raw.fallback_pointer_cids.map(value => String(value || '').trim()).filter(Boolean)
+    : [];
+  return {
+    version: Number(raw?.version || 1),
+    updatedAt: Number(raw?.updatedAt || 0),
+    currentPointerCid: current,
+    fallbackPointerCids: fallback,
+    source,
+    sourceType: extra.sourceType || 'static-pointer-board',
+    ipnsName: extra.ipnsName || '',
+    error: extra.error || '',
+  };
+}
+
+async function fetchStaticPointerBoard() {
+  try {
+    const response = await fetch(POINTER_BOARD_PATH, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`pointer board http ${response.status}`);
+    const raw = await response.json();
+    return normalizePointerBoard(raw, POINTER_BOARD_PATH, { sourceType: 'static-pointer-board' });
+  } catch (error) {
+    return normalizePointerBoard({}, POINTER_BOARD_PATH, {
+      sourceType: 'static-pointer-board',
+      error: error?.message || 'failed to fetch pointer board',
+    });
+  }
+}
+
+async function fetchIpnsPointerBoard() {
+  const ipnsName = getConfiguredIpnsName();
+  if (!ipnsName) {
+    return normalizePointerBoard({}, '', { sourceType: 'ipns', error: 'missing ipns name' });
+  }
+  const result = await fetchIpnsJson(ipnsName);
+  if (!result.ok) {
+    return normalizePointerBoard({}, result.path || '', { sourceType: 'ipns', ipnsName, error: result.error || 'failed to fetch ipns board' });
+  }
+  return normalizePointerBoard(result.data, result.path, { sourceType: 'ipns', ipnsName });
+}
+
+export async function fetchPointerBoard() {
+  const ipnsBoard = await fetchIpnsPointerBoard();
+  if (ipnsBoard.currentPointerCid || ipnsBoard.fallbackPointerCids.length) return ipnsBoard;
+  return fetchStaticPointerBoard();
+}
+
+export async function getKnownPointerCids() {
+  const board = await fetchPointerBoard();
+  return [...new Set([
+    board.currentPointerCid,
+    ...board.fallbackPointerCids,
+    ...getConfiguredDefaultPointers(),
+    ...loadKnownPointers(),
+  ].filter(Boolean))];
 }
 
 export function normalizeIndexManifest(raw = {}) {
@@ -76,10 +136,10 @@ export function getLastPointerCid() {
   return localStorage.getItem(LAST_POINTER_KEY) || '';
 }
 
-export function setLastPointerCid(cid) {
+export async function setLastPointerCid(cid) {
   if (cid) {
     localStorage.setItem(LAST_POINTER_KEY, cid);
-    saveKnownPointers([cid, ...getKnownPointerCids()]);
+    saveKnownPointers([cid, ...(await getKnownPointerCids())]);
   } else {
     localStorage.removeItem(LAST_POINTER_KEY);
   }
@@ -139,7 +199,7 @@ export async function pinIndexedCid(cid) {
 export async function publishIndexPointer(index) {
   const manifest = normalizeIndexManifest(index);
   const cid = await uploadCommunityStrategy(manifest);
-  setLastPointerCid(cid);
+  await setLastPointerCid(cid);
   const saved = saveLocalIndex({ ...manifest, sourceCid: cid });
   return { cid, index: saved };
 }
@@ -154,14 +214,14 @@ export async function importIndexFromPointer(pointerCid) {
   const local = loadLocalIndex();
   const { index, added } = mergeIndexManifest(local, remote);
   const saved = saveLocalIndex(index);
-  setLastPointerCid(pointerCid);
+  await setLastPointerCid(pointerCid);
   return { index: saved, added, pointerCid };
 }
 
 export async function refreshFromKnownPointers() {
   let local = loadLocalIndex();
   let totalAdded = 0;
-  for (const pointerCid of getKnownPointerCids()) {
+  for (const pointerCid of await getKnownPointerCids()) {
     try {
       const remote = await fetchIndexManifest(pointerCid);
       const merged = mergeIndexManifest(local, remote);
@@ -197,3 +257,4 @@ export function importIndexText(text) {
 export function getIndexedCids(index = loadLocalIndex()) {
   return normalizeIndexManifest(index).items.map(item => item.cid);
 }
+

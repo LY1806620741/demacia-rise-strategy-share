@@ -274,6 +274,7 @@
     "community_search_enabled": true,
     "default_max_results": 8,
     "pointer_hint": "通过指针 CID 同步社区索引",
+    "default_ipns_name": "",
     "default_pointer_cids": []
   }
 }

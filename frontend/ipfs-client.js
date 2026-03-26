@@ -4,6 +4,7 @@ import { CID } from 'https://cdn.jsdelivr.net/npm/multiformats@13.3.1/+esm';
 
 const PUBLISHED_CIDS_KEY = 'community_published_cids_v1';
 const PINNED_CIDS_KEY = 'community_pinned_cids_v1';
+const DEFAULT_IPNS_PATH_PREFIX = './ipns';
 
 let heliaNode = null;
 let fsApi = null;
@@ -179,3 +180,18 @@ export async function getIpfsStatus() {
   }
 }
 
+export async function fetchIpnsJson(ipnsName) {
+  const normalized = String(ipnsName || '').trim();
+  if (!normalized) {
+    return { ok: false, error: 'missing ipns name', path: '' };
+  }
+  const path = `${DEFAULT_IPNS_PATH_PREFIX}/${normalized}`;
+  try {
+    const response = await fetch(path, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`ipns http ${response.status}`);
+    const data = await response.json();
+    return { ok: true, path, data };
+  } catch (error) {
+    return { ok: false, path, error: error?.message || 'failed to fetch ipns json' };
+  }
+}
