@@ -110,6 +110,7 @@ export async function renderIpfsStatus() {
     lastPublishedCid: status.lastPublishedCid,
     lastPinnedCid: status.lastPinnedCid,
     lastError: status.lastError,
+    providerStatus: status.providerStatus,
   };
   if (!status.ready) {
     container.innerHTML = `<div style="font-size:.92em;line-height:1.7;color:#ff8a80;">
@@ -135,12 +136,12 @@ export function renderCommunityIndexStatus(index, pointerCid = '', message = '',
   const itemCount = Array.isArray(index?.items) ? index.items.length : 0;
   const pinnedCount = Array.isArray(index?.items) ? index.items.filter(item => item.pinned === true).length : 0;
   const updatedAt = index?.updatedAt ? new Date(index.updatedAt).toLocaleString() : '未记录';
-  const pointerLine = pointerCid ? `当前共享指针：<span style="word-break:break-all;">${escapeHtml(pointerCid)}</span><br>` : '';
-  const knownLine = knownPointers.length ? `已知共享入口：${knownPointers.length} 个<br>` : '';
+  const pointerLine = pointerCid ? `当前共享 pointer：<span style="word-break:break-all;">${escapeHtml(pointerCid)}</span><br>` : '';
+  const knownLine = knownPointers.length ? `已知共享入口：${knownPointers.length} 个<br>` : '已知共享入口：0 个<br>';
   const providerLine = state.ipfs.ready
-    ? `本机提供状态：<span style="color:${state.ipfs.canProvide ? '#8bc34a' : '#ffd54f'};">${state.ipfs.canProvide ? '在线，可提供社区数据' : '已连接，待发布后可提供'}</span><br>`
+    ? `本机提供状态：<span style="color:${state.ipfs.canProvide ? '#8bc34a' : '#ffd54f'};">${escapeHtml(state.ipfs.providerStatus || (state.ipfs.canProvide ? '在线，可提供社区数据' : '已连接，待发布后可提供'))}</span><br>`
     : `本机提供状态：<span style="color:#ff8a80;">IPFS 未连接</span><br>`;
+  const discoveryLine = `发现方式：${escapeHtml(state.communitySync.discoverySource || 'local')}${state.communitySync.redisRegistered ? '（已登记 Redis 引导）' : ''}<br>`;
   const messageLine = message ? `<div style="margin-top:.35rem;color:#9fd3ff;">${escapeHtml(message)}</div>` : '';
-  container.innerHTML = `本地索引条目：${itemCount}<br>已固定条目：${pinnedCount}<br>${pointerLine}${knownLine}${providerLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
+  container.innerHTML = `本地索引条目：${itemCount}<br>已固定条目：${pinnedCount}<br>${pointerLine}${knownLine}${providerLine}${discoveryLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
 }
-

@@ -12,7 +12,8 @@ import {
   pinIndexedCid,
   refreshFromKnownPointers,
   getKnownPointerCids,
-  fetchPointerBoard,
+  discoverCommunityPointers,
+  ensureDiscoveryRegistration,
 } from './community-index.js';
 import { renderCommunityIndexStatus, renderIpfsStatus, updateDashboard } from './view-renderers.js';
 import { syncLocalStrategies, get_strategies } from './community-strategy.js';
@@ -61,34 +62,51 @@ export function createIndexSyncController({ renderCommunity }) {
   async function syncCommunityIndexFromPointer() {
     const pointerCid = byId('community-index-pointer-input')?.value?.trim();
     if (!pointerCid) {
-      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '请先输入指针 CID', await getKnownPointerCids());
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '请先输入共享 pointer CID', await getKnownPointerCids());
       return;
     }
     try {
       const result = await importIndexFromPointer(pointerCid);
       communityIndex = result.index;
       state.communitySync.lastImportedPointerCid = pointerCid;
-      state.communitySync.lastMessage = `已从共享指针同步，新增 ${result.added} 条`;
+      state.communitySync.lastMessage = `已从共享入口同步，新增 ${result.added} 条`;
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
       console.error('failed to sync community index from pointer', error);
-      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：指针无效或远端索引不可读', await getKnownPointerCids());
+      renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：pointer 无效或远端索引不可读', await getKnownPointerCids());
     }
   }
 
   async function refreshCommunityFromKnownPointers() {
-    const board = await fetchPointerBoard();
+    const discovery = await discoverCommunityPointers();
     const result = await refreshFromKnownPointers();
     communityIndex = result.index;
-    const boardMessage = board.currentPointerCid
-      ? (board.sourceType === 'ipns'
-          ? `已通过 IPNS 加载最新 pointer：${board.currentPointerCid.slice(0, 16)}…`
-          : `已通过静态公告板加载最新 pointer：${board.currentPointerCid.slice(0, 16)}…`)
-      : 'IPNS / 公告板均未配置 pointer，已回退到本地/配置入口';
+    const baseMessage = discovery.pointerCid
+      ? `已通过 Redis 发现共享入口：${discovery.pointerCid.slice(0, 16)}…`
+      : discovery.knownPointers.length
+        ? '已通过本地/配置入口检查社区共享索引'
+        : '暂未发现在线社区入口，可在首次发布后自动登记';
     state.communitySync.lastMessage = result.added
-      ? `${boardMessage}，并新增 ${result.added} 条社区内容`
-      : `${boardMessage}，暂无新增`;
+      ? `${baseMessage}，并新增 ${result.added} 条社区内容`
+      : `${baseMessage}，暂无新增`;
+    state.communitySync.discoverySource = discovery.source;
+    state.communitySync.knownPointerCount = discovery.knownPointers.length;
     await refreshStrategiesFromIndex(state.communitySync.lastMessage);
+  }
+
+  async function bootstrapCommunityNetwork() {
+    const discovery = await discoverCommunityPointers();
+    state.communitySync.discoverySource = discovery.source;
+    state.communitySync.knownPointerCount = discovery.knownPointers.length;
+    if (!discovery.hasNetworkEntry) {
+      const registration = await ensureDiscoveryRegistration();
+      if (registration.ok) {
+        state.communitySync.lastMessage = '未发现在线入口，已自动通过 Redis 建立首个社区入口';
+      } else if (!registration.skipped) {
+        state.communitySync.lastMessage = '未发现在线入口，且 Redis 注册失败；当前仅可使用本地社区数据';
+      }
+    }
+    await refreshCommunityFromKnownPointers();
   }
 
   async function publishCommunityIndexPointerAction() {
@@ -96,7 +114,7 @@ export function createIndexSyncController({ renderCommunity }) {
       const result = await publishIndexPointer(communityIndex);
       communityIndex = result.index;
       state.communitySync.lastPublishedPointerCid = result.cid;
-      state.communitySync.lastMessage = '本地索引已发布；如需固定最新地址，请更新 IPNS 指向，或回退使用公告板 /community-pointer.json';
+      state.communitySync.lastMessage = '本地索引已发布；若网络暂无其他入口，将自动登记为共享发现入口';
       const input = byId('community-index-pointer-input');
       if (input) input.value = result.cid;
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
@@ -139,7 +157,7 @@ export function createIndexSyncController({ renderCommunity }) {
       target: created.target,
     });
     saveLocalIndex(communityIndex);
-    return refreshStrategiesFromIndex('已写入本地索引，可继续发布共享指针给其他人');
+    return refreshStrategiesFromIndex('已写入本地索引，可继续共享给其他节点');
   }
 
   function hydratePointerInput() {
@@ -153,6 +171,7 @@ export function createIndexSyncController({ renderCommunity }) {
     refreshStrategiesFromIndex,
     syncCommunityIndexFromPointer,
     refreshCommunityFromKnownPointers,
+    bootstrapCommunityNetwork,
     publishCommunityIndexPointer: publishCommunityIndexPointerAction,
     exportCommunityIndex,
     appendCreatedStrategy,

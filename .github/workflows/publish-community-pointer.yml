@@ -1,0 +1,38 @@
+name: Publish community pointer to Upstash Redis
+
+on:
+  workflow_dispatch:
+    inputs:
+      pointer_cid:
+        description: '要发布到 Redis 的社区索引 pointer CID'
+        required: true
+        type: string
+      pointer_source:
+        description: '来源标记（可选）'
+        required: false
+        default: 'github-action'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish-pointer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Publish pointer to Upstash Redis
+        env:
+          UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
+          UPSTASH_REDIS_WRITE_TOKEN: ${{ secrets.UPSTASH_REDIS_WRITE_TOKEN }}
+          UPSTASH_REDIS_KEY: ${{ secrets.UPSTASH_REDIS_KEY }}
+          POINTER_CID: ${{ inputs.pointer_cid }}
+          POINTER_SOURCE: ${{ inputs.pointer_source }}
+        run: node ./scripts/publish-pointer-to-redis.mjs
+

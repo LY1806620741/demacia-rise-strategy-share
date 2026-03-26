@@ -79,8 +79,8 @@ async function pinCommunityStrategy(cid) {
   safeRender('renderSearchResults', () => searchController.renderSearch());
   updateDashboard({ state, getStrategies: get_strategies });
   await safeRender('renderIpfsStatus', () => renderIpfsStatus());
-  await indexController.refreshCommunityFromKnownPointers();
-  await indexController.refreshStrategiesFromIndex('页面已加载，已检查 IPFS 与共享索引状态');
+  await indexController.bootstrapCommunityNetwork();
+  await indexController.refreshStrategiesFromIndex('页面已加载，已检查 IPFS 连接与社区发现状态');
 })();
 
 globalThis.__frontendModules = { state, loadConfig, renderBattleTechOptions, renderEnemyUnitList };

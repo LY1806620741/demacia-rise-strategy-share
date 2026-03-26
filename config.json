@@ -273,8 +273,13 @@
   "community": {
     "community_search_enabled": true,
     "default_max_results": 8,
-    "pointer_hint": "通过指针 CID 同步社区索引",
-    "default_ipns_name": "",
-    "default_pointer_cids": []
+    "pointer_hint": "通过共享 pointer CID 同步社区索引；优先本地与去中心化内容分发，网络为空时自动回退 Redis 发现",
+    "default_pointer_cids": [],
+    "upstash_redis": {
+      "url": "https://proper-kitten-85315.upstash.io",
+      "token": "ggAAAAAAAU1DAAIgcDFjdS2lRjsIZcOl7rikNqCmbtD26FsOwzC8MGzwB5-pYw",
+      "write_token": "",
+      "key": "community:latest-pointer-record"
+    }
   }
 }

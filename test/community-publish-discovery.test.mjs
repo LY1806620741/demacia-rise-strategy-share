@@ -20,6 +20,7 @@ async function publishFlow(onCreated) {
   const indexController = {
     appendCreatedStrategy: async item => calls.push(['append', item.cid]),
     publishCommunityIndexPointer: async () => calls.push(['publish-pointer']),
+    ensureDiscoveryRegistration: async () => calls.push(['register-redis']),
   };
   await onCreated(created, indexController, calls);
   return calls;
@@ -28,10 +29,10 @@ async function publishFlow(onCreated) {
 const calls = await publishFlow(async (created, indexController, calls) => {
   await indexController.appendCreatedStrategy(created);
   await indexController.publishCommunityIndexPointer();
+  await indexController.ensureDiscoveryRegistration();
   calls.push(['done']);
 });
 
-assert.deepEqual(calls, [['append', 'bafy-strategy'], ['publish-pointer'], ['done']], '发布策略后应立即更新并发布共享索引指针，便于其他节点发现');
+assert.deepEqual(calls, [['append', 'bafy-strategy'], ['publish-pointer'], ['register-redis'], ['done']], '发布策略后应立即更新索引，并在必要时登记 Redis 发现入口，便于其他节点发现');
 
 console.log('community publish discovery: ok');
-

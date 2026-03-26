@@ -34,10 +34,11 @@
 - 敌人阵容文本快速输入与相似策略搜索
 - 社区策略发布、浏览、点赞 / 点踩
 - 本地社区索引持久化
-- 公告板 / 指针 CID 同步社区索引
+- 共享 pointer CID 同步社区索引
+- GitHub Action 发布最新社区入口到 Upstash Redis
 - 社区索引导入 / 导出
 - 浏览器端 IPFS 节点状态展示
-- 纯静态部署，无需后端服务
+- 纯静态部署，前端默认仅保留只读发现能力
 
 ---
 
@@ -83,8 +84,9 @@ UI Rendering     Community Strategy Editing
             ▼
       Helia / IPFS Storage
             │
-            ▼
- Pointer CID / Bulletin-style Sharing
+            ├──────────────► GitHub Action ──────────────► Upstash Redis latest-pointer key
+            │                                              ▲
+            └────────────────────── Frontend read-only ────┘
 ```
 
 ---
@@ -213,19 +215,105 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 
 ---
 
+## Community Discovery Model
+
+当前推荐的社区发现模型：
+
+- **内容存储/拉取**：Helia + IPFS
+- **冷启动发现**：Upstash Redis 固定 key，保存最新 pointer CID
+- **浏览器前端**：默认只读 Redis，不暴露写 token
+- **写入入口**：GitHub Action 使用仓库 Secrets 写 Redis
+
+这意味着：
+
+1. 浏览器负责发布社区内容到 IPFS
+2. 浏览器或用户拿到最新 pointer CID
+3. 通过 GitHub Action 将 pointer CID 写入 Redis
+4. 其他浏览器打开页面后，读取 Redis 中的最新 pointer 并拉取社区索引
+
+这样可以避免把 Redis 写权限暴露到 GitHub Pages 前端代码中。
+
+## GitHub Action: Publish Pointer to Redis
+
+仓库已包含工作流：
+
+- `.github/workflows/publish-community-pointer.yml`
+
+脚本入口：
+
+- `scripts/publish-pointer-to-redis.mjs`
+
+### 需要配置的 GitHub Secrets
+
+在仓库设置中添加：
+
+- `UPSTASH_REDIS_URL`
+- `UPSTASH_REDIS_WRITE_TOKEN`
+- `UPSTASH_REDIS_KEY`（可选，不填时默认 `community:latest-pointer-record`）
+
+### 触发方式
+
+在 GitHub Actions 页面手动触发：
+
+- `pointer_cid`: 新发布的社区索引 pointer CID
+- `pointer_source`: 可选，默认 `github-action`
+
+### 前端配置
+
+前端 `config.json` 中只保留：
+
+- `url`
+- `readonly token`
+- `key`
+
+不要把写 token 提交到仓库或放入静态前端资源。
+
+## OrbitDB 可行性结论
+
+对于这个项目当前的目标：
+
+- GitHub Pages 静态托管
+- 浏览器作为主要节点
+- 所有节点都可能全部离线
+- 需要下一次访问时自动恢复发现能力
+
+**OrbitDB 不适合作为冷启动发现层的替代品。**
+
+原因：
+
+1. OrbitDB 仍然依赖底层 IPFS/libp2p 可达性
+2. 所有浏览器节点都离线后，没有稳定在线锚点时，新的浏览器节点仍然不知道该去发现谁
+3. 浏览器环境不具备长期稳定监听、长期保活、稳定网络地址等条件
+4. OrbitDB 更适合“已有可达网络后的协作复制”，不适合“无锚点冷启动发现”
+
+### 适合当前项目的判断
+
+- **可用**：Redis 作为最新 pointer 冷启动发现层
+- **可用**：Helia/IPFS 作为社区正文与索引内容分发层
+- **可选灾备**：保留静态 `community-pointer.json` 作为人工恢复入口
+- **不推荐主用**：OrbitDB 替代 Redis 负责所有节点离线后的重新组网
+
+简单说：
+
+- OrbitDB 可以作为未来“在线节点之间的协作数据库层”候选
+- 但不能解决“所有节点都离线后，下一台浏览器如何知道入口”的问题
+
+---
+
 ## Limitations
 
 当前架构仍有几个现实限制：
 
 1. 浏览器端 Helia 的内容传播能力受浏览器网络环境限制
-2. 社区内容发现目前依赖“索引 CID / 公告板 CID”的传播
-3. 没有中心化后端，因此不存在自动全网公告板更新
+2. 社区内容的冷启动发现当前依赖 Redis 中保存的最新 pointer
+3. 没有自建后端，但仍需要 GitHub Action 或其他受控写入入口维护 Redis 最新 pointer
 4. 不同浏览器、不同网络环境下的节点可达性可能不同
 
 换句话说：
 
 - **内容存储可以去中心化**
-- **内容发现目前仍需要人为传播索引 CID，或额外的命名/公告板层**
+- **冷启动发现仍需要一个稳定锚点**
+- **OrbitDB 不能单独解决浏览器全离线后的再次发现问题**
 
 ---
 
@@ -253,9 +341,11 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 
 - [x] 从 `ipfs-core` 迁移到 Helia
 - [x] 社区索引本地持久化
-- [x] 指针 CID 同步与索引导入导出
-- [ ] 多公告板订阅列表
-- [ ] 自动合并多个指针来源
+- [x] 共享 pointer CID 同步与索引导入导出
+- [x] Upstash Redis 只读发现接入
+- [x] GitHub Action 发布最新 pointer 到 Redis
+- [ ] 在 UI 中增加“一键复制 pointer 并提示去 Actions 发布”流程
+- [ ] 增加 Redis 发现记录格式校验与坏数据回退提示
 - [ ] 更强的社区搜索排序
 - [ ] 更稳定的浏览器端内容传播策略
 - [ ] 更完整的社区策略元数据结构

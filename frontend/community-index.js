@@ -1,18 +1,94 @@
-import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid, fetchIpnsJson } from './ipfs-client.js';
-import { state } from './state.js';
+import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid, getPublishedCids, getIpfsStatus } from './ipfs-client.js';
+import { state, DISCOVERY_RECORD_TTL_MS } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
 const LAST_POINTER_KEY = 'community_index_last_pointer_cid';
-const KNOWN_POINTERS_KEY = 'community_index_known_pointers_v1';
-const POINTER_BOARD_PATH = './community-pointer.json';
+const KNOWN_POINTERS_KEY = 'community_index_known_pointers_v2';
+const DISCOVERY_SOURCE_KEY = 'community_discovery_source_v1';
+const REDIS_DISCOVERY_KEY = 'community:latest-pointer-record';
 
-export function createEmptyIndex() {
+function getRedisConfig() {
+  const redis = state?.config?.community?.upstash_redis || {};
   return {
-    version: 2,
-    updatedAt: Date.now(),
-    sourceCid: '',
-    items: [],
+    url: String(redis.url || '').trim(),
+    token: String(redis.token || '').trim(),
+    writeToken: String(redis.write_token || redis.writeToken || redis.token || '').trim(),
+    key: String(redis.key || REDIS_DISCOVERY_KEY).trim() || REDIS_DISCOVERY_KEY,
   };
+}
+
+function withAuth(headers = {}, mode = 'read') {
+  const redis = getRedisConfig();
+  const token = mode === 'write' ? redis.writeToken : redis.token;
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+}
+
+function createDiscoveryRecord(pointerCid, extra = {}) {
+  return {
+    version: 1,
+    pointerCid: String(pointerCid || '').trim(),
+    updatedAt: Date.now(),
+    peerId: String(extra.peerId || state?.ipfs?.peerId || '').trim(),
+    providerStatus: String(extra.providerStatus || state?.ipfs?.providerStatus || '').trim(),
+    source: String(extra.source || 'redis-fallback').trim(),
+  };
+}
+
+function normalizeDiscoveryRecord(raw = {}, extra = {}) {
+  return {
+    version: Number(raw?.version || 1),
+    pointerCid: String(raw?.pointerCid || raw?.current_pointer_cid || '').trim(),
+    updatedAt: Number(raw?.updatedAt || 0),
+    peerId: String(raw?.peerId || '').trim(),
+    providerStatus: String(raw?.providerStatus || '').trim(),
+    source: String(extra.source || raw?.source || 'unknown').trim(),
+    error: String(extra.error || '').trim(),
+  };
+}
+
+function isFreshDiscoveryRecord(record) {
+  return !!record?.pointerCid && Number(record?.updatedAt || 0) > (Date.now() - DISCOVERY_RECORD_TTL_MS);
+}
+
+export async function fetchRedisDiscoveryRecord() {
+  const redis = getRedisConfig();
+  if (!redis.url) {
+    return normalizeDiscoveryRecord({}, { source: 'redis', error: 'missing redis url' });
+  }
+  try {
+    const response = await fetch(`${redis.url}/get/${encodeURIComponent(redis.key)}`, {
+      headers: withAuth({}, 'read'),
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(`redis http ${response.status}`);
+    const payload = await response.json();
+    if (!payload?.result) return normalizeDiscoveryRecord({}, { source: 'redis', error: 'empty redis record' });
+    const parsed = typeof payload.result === 'string' ? JSON.parse(payload.result) : payload.result;
+    return normalizeDiscoveryRecord(parsed, { source: 'redis' });
+  } catch (error) {
+    return normalizeDiscoveryRecord({}, { source: 'redis', error: error?.message || 'failed to fetch redis record' });
+  }
+}
+
+export async function publishRedisDiscoveryRecord(pointerCid, extra = {}) {
+  const normalizedCid = String(pointerCid || '').trim();
+  if (!normalizedCid) return { ok: false, error: 'missing pointer cid' };
+  const redis = getRedisConfig();
+  if (!redis.url) return { ok: false, error: 'missing redis url' };
+  if (!redis.writeToken) return { ok: false, error: 'missing redis write token' };
+  const record = createDiscoveryRecord(normalizedCid, extra);
+  try {
+    const response = await fetch(`${redis.url}/set/${encodeURIComponent(redis.key)}`, {
+      method: 'POST',
+      headers: withAuth({ 'Content-Type': 'application/json' }, 'write'),
+      body: JSON.stringify({ value: JSON.stringify(record) }),
+    });
+    if (!response.ok) throw new Error(`redis set http ${response.status}`);
+    localStorage.setItem(DISCOVERY_SOURCE_KEY, 'redis');
+    return { ok: true, record };
+  } catch (error) {
+    return { ok: false, error: error?.message || 'failed to publish redis record', record };
+  }
 }
 
 function loadKnownPointers() {
@@ -35,67 +111,13 @@ function getConfiguredDefaultPointers() {
   return Array.isArray(configured) ? configured.map(value => String(value || '')).filter(Boolean) : [];
 }
 
-function getConfiguredIpnsName() {
-  return String(state?.config?.community?.default_ipns_name || '').trim();
-}
-
-function normalizePointerBoard(raw = {}, source = POINTER_BOARD_PATH, extra = {}) {
-  const current = String(raw?.current_pointer_cid || '').trim();
-  const fallback = Array.isArray(raw?.fallback_pointer_cids)
-    ? raw.fallback_pointer_cids.map(value => String(value || '').trim()).filter(Boolean)
-    : [];
+export function createEmptyIndex() {
   return {
-    version: Number(raw?.version || 1),
-    updatedAt: Number(raw?.updatedAt || 0),
-    currentPointerCid: current,
-    fallbackPointerCids: fallback,
-    source,
-    sourceType: extra.sourceType || 'static-pointer-board',
-    ipnsName: extra.ipnsName || '',
-    error: extra.error || '',
+    version: 2,
+    updatedAt: Date.now(),
+    sourceCid: '',
+    items: [],
   };
-}
-
-async function fetchStaticPointerBoard() {
-  try {
-    const response = await fetch(POINTER_BOARD_PATH, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`pointer board http ${response.status}`);
-    const raw = await response.json();
-    return normalizePointerBoard(raw, POINTER_BOARD_PATH, { sourceType: 'static-pointer-board' });
-  } catch (error) {
-    return normalizePointerBoard({}, POINTER_BOARD_PATH, {
-      sourceType: 'static-pointer-board',
-      error: error?.message || 'failed to fetch pointer board',
-    });
-  }
-}
-
-async function fetchIpnsPointerBoard() {
-  const ipnsName = getConfiguredIpnsName();
-  if (!ipnsName) {
-    return normalizePointerBoard({}, '', { sourceType: 'ipns', error: 'missing ipns name' });
-  }
-  const result = await fetchIpnsJson(ipnsName);
-  if (!result.ok) {
-    return normalizePointerBoard({}, result.path || '', { sourceType: 'ipns', ipnsName, error: result.error || 'failed to fetch ipns board' });
-  }
-  return normalizePointerBoard(result.data, result.path, { sourceType: 'ipns', ipnsName });
-}
-
-export async function fetchPointerBoard() {
-  const ipnsBoard = await fetchIpnsPointerBoard();
-  if (ipnsBoard.currentPointerCid || ipnsBoard.fallbackPointerCids.length) return ipnsBoard;
-  return fetchStaticPointerBoard();
-}
-
-export async function getKnownPointerCids() {
-  const board = await fetchPointerBoard();
-  return [...new Set([
-    board.currentPointerCid,
-    ...board.fallbackPointerCids,
-    ...getConfiguredDefaultPointers(),
-    ...loadKnownPointers(),
-  ].filter(Boolean))];
 }
 
 export function normalizeIndexManifest(raw = {}) {
@@ -139,10 +161,61 @@ export function getLastPointerCid() {
 export async function setLastPointerCid(cid) {
   if (cid) {
     localStorage.setItem(LAST_POINTER_KEY, cid);
-    saveKnownPointers([cid, ...(await getKnownPointerCids())]);
+    saveKnownPointers([cid, ...loadKnownPointers(), ...getPublishedCids()]);
   } else {
     localStorage.removeItem(LAST_POINTER_KEY);
   }
+}
+
+export async function discoverCommunityPointers() {
+  const redisRecord = await fetchRedisDiscoveryRecord();
+  const pointers = [...new Set([
+    isFreshDiscoveryRecord(redisRecord) ? redisRecord.pointerCid : '',
+    getLastPointerCid(),
+    ...getPublishedCids(),
+    ...getConfiguredDefaultPointers(),
+    ...loadKnownPointers(),
+  ].filter(Boolean))];
+
+  const source = isFreshDiscoveryRecord(redisRecord)
+    ? 'redis'
+    : (pointers.length ? (localStorage.getItem(DISCOVERY_SOURCE_KEY) || 'local') : 'empty');
+
+  return {
+    source,
+    pointerCid: isFreshDiscoveryRecord(redisRecord) ? redisRecord.pointerCid : '',
+    knownPointers: pointers,
+    redisRecord,
+    hasNetworkEntry: pointers.length > 0,
+  };
+}
+
+export async function ensureDiscoveryRegistration(pointerCid = '') {
+  const discovery = await discoverCommunityPointers();
+  const effectivePointerCid = String(pointerCid || getLastPointerCid() || getPublishedCids()[0] || '').trim();
+  if (discovery.hasNetworkEntry || !effectivePointerCid) {
+    return { ok: false, skipped: true, reason: discovery.hasNetworkEntry ? 'network-entry-exists' : 'missing-pointer', discovery };
+  }
+  const ipfsStatus = await getIpfsStatus();
+  const result = await publishRedisDiscoveryRecord(effectivePointerCid, {
+    peerId: ipfsStatus.id,
+    providerStatus: ipfsStatus.providerStatus,
+    source: 'redis-bootstrap',
+  });
+  if (result.ok) {
+    saveKnownPointers([effectivePointerCid, ...loadKnownPointers()]);
+    state.communitySync.redisRegistered = true;
+    state.communitySync.discoverySource = 'redis';
+    state.communitySync.lastMessage = '当前未发现在线社区入口，已自动写入 Redis 作为首个入口';
+  }
+  return { ...result, discovery: await discoverCommunityPointers() };
+}
+
+export async function getKnownPointerCids() {
+  const discovery = await discoverCommunityPointers();
+  state.communitySync.discoverySource = discovery.source;
+  state.communitySync.knownPointerCount = discovery.knownPointers.length;
+  return discovery.knownPointers;
 }
 
 export function mergeIndexManifest(baseIndex, incomingIndex) {
@@ -201,6 +274,8 @@ export async function publishIndexPointer(index) {
   const cid = await uploadCommunityStrategy(manifest);
   await setLastPointerCid(cid);
   const saved = saveLocalIndex({ ...manifest, sourceCid: cid });
+  saveKnownPointers([cid, ...loadKnownPointers(), ...getPublishedCids()]);
+  await ensureDiscoveryRegistration(cid);
   return { cid, index: saved };
 }
 
@@ -215,13 +290,15 @@ export async function importIndexFromPointer(pointerCid) {
   const { index, added } = mergeIndexManifest(local, remote);
   const saved = saveLocalIndex(index);
   await setLastPointerCid(pointerCid);
+  saveKnownPointers([pointerCid, ...loadKnownPointers()]);
   return { index: saved, added, pointerCid };
 }
 
 export async function refreshFromKnownPointers() {
   let local = loadLocalIndex();
   let totalAdded = 0;
-  for (const pointerCid of await getKnownPointerCids()) {
+  const knownPointers = await getKnownPointerCids();
+  for (const pointerCid of knownPointers) {
     try {
       const remote = await fetchIndexManifest(pointerCid);
       const merged = mergeIndexManifest(local, remote);
@@ -231,7 +308,7 @@ export async function refreshFromKnownPointers() {
       console.warn('failed to refresh pointer', pointerCid, error);
     }
   }
-  return { index: saveLocalIndex(local), added: totalAdded };
+  return { index: saveLocalIndex(local), added: totalAdded, knownPointers };
 }
 
 export async function resolveIndexedStrategies(index) {
@@ -257,4 +334,3 @@ export function importIndexText(text) {
 export function getIndexedCids(index = loadLocalIndex()) {
   return normalizeIndexManifest(index).items.map(item => item.cid);
 }
-
