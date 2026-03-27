@@ -10,6 +10,7 @@ import {
   getPinnedCids,
 } from './ipfs-client.js';
 import { createCommunityStrategyRecord, normalizeCommunityStrategyRecord, calculateStrategySimilarity } from './strategy-schema.js';
+import { state } from './state.js';
 
 export function buildStrategyTitle(description, target) {
   const desc = (description || '').trim();
@@ -22,11 +23,13 @@ export function renderCommunityLineups(getStrategies, { onRendered, onVote, onPi
   if (!list) return;
   const published = new Set(getPublishedCids());
   const pinned = new Set(getPinnedCids());
+  const replicaCounts = state.communityPins?.pinCounts || {};
   const strategies = wasmArray(getStrategies()).map(normalizeCommunityStrategyRecord);
   list.innerHTML = strategies.length
     ? strategies.slice().reverse().map(strategy => {
       const isPublishedHere = published.has(strategy.cid);
       const isPinned = pinned.has(strategy.cid) || strategy.pinned === true;
+      const onlineReplicaCount = Number(replicaCounts[strategy.cid] || 0);
       return `
       <div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.8rem;">
         <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap;">
@@ -41,6 +44,7 @@ export function renderCommunityLineups(getStrategies, { onRendered, onVote, onPi
           CID：${escapeHtml(strategy.cid || '未发布')}
           ${isPublishedHere ? ' · <span style="color:#8bc34a;">当前节点正在提供</span>' : ''}
           ${isPinned ? ' · <span style="color:#4fc3f7;">已固定</span>' : ''}
+          · <span style="color:#ffd54f;">在线副本 ${onlineReplicaCount}</span>
         </div>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
           <button type="button" onclick="voteStrategy('${strategy.id}', true)">👍 ${strategy.likes || 0}</button>
@@ -147,4 +151,3 @@ export function vote(id, isLike) {
     localStrategies[idx] = next;
   }
 }
-

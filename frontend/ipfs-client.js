@@ -5,6 +5,8 @@ import { CID } from 'https://cdn.jsdelivr.net/npm/multiformats@13.3.1/+esm';
 const PUBLISHED_CIDS_KEY = 'community_published_cids_v1';
 const PINNED_CIDS_KEY = 'community_pinned_cids_v1';
 const DEFAULT_IPNS_PATH_PREFIX = './ipns';
+const REPLICA_BOARD_UPDATED_AT_KEY = 'community_replica_board_updated_at_v1';
+const REPLICA_BOARD_CID_KEY = 'community_replica_board_cid_v1';
 
 let heliaNode = null;
 let fsApi = null;
@@ -194,4 +196,58 @@ export async function fetchIpnsJson(ipnsName) {
   } catch (error) {
     return { ok: false, path, error: error?.message || 'failed to fetch ipns json' };
   }
+}
+
+export async function uploadJsonDocument(document) {
+  const { fs } = await ensureHelia();
+  const bytes = new TextEncoder().encode(JSON.stringify(document));
+  const cid = await fs.addBytes(bytes);
+  return cid.toString();
+}
+
+export function createOnlineReplicaBoard({ peerId = '', cids = [], updatedAt = Date.now() } = {}) {
+  return {
+    version: 1,
+    peerId: String(peerId || '').trim(),
+    updatedAt: Number(updatedAt || Date.now()),
+    claims: [...new Set((Array.isArray(cids) ? cids : []).map(value => String(value || '').trim()).filter(Boolean))]
+      .map(cid => ({ cid, peerId: String(peerId || '').trim(), updatedAt: Number(updatedAt || Date.now()) })),
+  };
+}
+
+export function getLastReplicaBoardUpdatedAt() {
+  return Number(localStorage.getItem(REPLICA_BOARD_UPDATED_AT_KEY) || 0);
+}
+
+export function getLastReplicaBoardCid() {
+  return String(localStorage.getItem(REPLICA_BOARD_CID_KEY) || '').trim();
+}
+
+export async function uploadOnlineReplicaBoard(board) {
+  const cid = await uploadJsonDocument(board);
+  localStorage.setItem(REPLICA_BOARD_UPDATED_AT_KEY, String(Date.now()));
+  localStorage.setItem(REPLICA_BOARD_CID_KEY, cid);
+  return cid;
+}
+
+export async function fetchJsonDocument(cid) {
+  return fetchCommunityStrategy(cid);
+}
+
+export async function fetchOnlineReplicaBoard(cid) {
+  const raw = await fetchJsonDocument(cid);
+  return {
+    version: Number(raw?.version || 1),
+    peerId: String(raw?.peerId || '').trim(),
+    updatedAt: Number(raw?.updatedAt || 0),
+    claims: Array.isArray(raw?.claims)
+      ? raw.claims
+          .filter(item => item?.cid && item?.peerId)
+          .map(item => ({
+            cid: String(item.cid).trim(),
+            peerId: String(item.peerId).trim(),
+            updatedAt: Number(item.updatedAt || raw?.updatedAt || 0),
+          }))
+      : [],
+  };
 }

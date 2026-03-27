@@ -29,6 +29,12 @@ export const state = {
     lastError: '',
     providerStatus: 'IPFS 未连接',
   },
+  communityPins: {
+    pinCounts: {},
+    totalReplicas: 0,
+    replicatedStrategyCount: 0,
+    updatedAt: 0,
+  },
   networkConfig: {
     communitySearchEnabled: true,
     defaultMaxResults: 8,

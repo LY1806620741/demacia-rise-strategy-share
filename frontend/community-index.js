@@ -1,4 +1,15 @@
-import { fetchCommunityStrategies, fetchCommunityStrategy, uploadCommunityStrategy, pinCommunityCid, getPublishedCids, getIpfsStatus } from './ipfs-client.js';
+import {
+  fetchCommunityStrategies,
+  fetchCommunityStrategy,
+  uploadCommunityStrategy,
+  pinCommunityCid,
+  getPublishedCids,
+  getIpfsStatus,
+  createOnlineReplicaBoard,
+  uploadOnlineReplicaBoard,
+  fetchOnlineReplicaBoard,
+  getPinnedCids,
+} from './ipfs-client.js';
 import { state, DISCOVERY_RECORD_TTL_MS } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
@@ -125,6 +136,7 @@ export function normalizeIndexManifest(raw = {}) {
     version: Number(raw.version || 2),
     updatedAt: Number(raw.updatedAt || Date.now()),
     sourceCid: String(raw.sourceCid || ''),
+    replicaBoardCid: String(raw.replicaBoardCid || ''),
     items: Array.isArray(raw.items)
       ? raw.items
           .filter(item => item?.cid)
@@ -233,6 +245,7 @@ export function mergeIndexManifest(baseIndex, incomingIndex) {
     version: Math.max(base.version, incoming.version, 2),
     updatedAt: Date.now(),
     sourceCid: incoming.sourceCid || base.sourceCid || '',
+    replicaBoardCid: incoming.replicaBoardCid || base.replicaBoardCid || '',
     items: [...map.values()].sort((a, b) => b.addedAt - a.addedAt),
   };
   return { index: merged, added };
@@ -271,9 +284,16 @@ export async function pinIndexedCid(cid) {
 
 export async function publishIndexPointer(index) {
   const manifest = normalizeIndexManifest(index);
-  const cid = await uploadCommunityStrategy(manifest);
+  const ipfsStatus = await getIpfsStatus();
+  const replicaBoard = createOnlineReplicaBoard({
+    peerId: ipfsStatus.id,
+    cids: [...new Set([...getPublishedCids(), ...getPinnedCids(), ...manifest.items.map(item => item.cid)])],
+    updatedAt: Date.now(),
+  });
+  const replicaBoardCid = await uploadOnlineReplicaBoard(replicaBoard);
+  const cid = await uploadCommunityStrategy({ ...manifest, replicaBoardCid });
   await setLastPointerCid(cid);
-  const saved = saveLocalIndex({ ...manifest, sourceCid: cid });
+  const saved = saveLocalIndex({ ...manifest, sourceCid: cid, replicaBoardCid });
   saveKnownPointers([cid, ...loadKnownPointers(), ...getPublishedCids()]);
   await ensureDiscoveryRegistration(cid);
   return { cid, index: saved };
@@ -333,4 +353,37 @@ export function importIndexText(text) {
 
 export function getIndexedCids(index = loadLocalIndex()) {
   return normalizeIndexManifest(index).items.map(item => item.cid);
+}
+
+export async function aggregateOnlineReplicaClaims(index) {
+  const normalized = normalizeIndexManifest(index);
+  const claims = [];
+  const boardCids = normalized.replicaBoardCid ? [normalized.replicaBoardCid] : [];
+  for (const boardCid of boardCids) {
+    try {
+      const board = await fetchOnlineReplicaBoard(boardCid);
+      claims.push(...board.claims);
+    } catch (error) {
+      console.warn('failed to fetch online replica board', boardCid, error);
+    }
+  }
+  return claims;
+}
+
+export async function aggregateOnlineReplicaClaimsForPointers(pointerCids = []) {
+  const claims = [];
+  const visitedBoards = new Set();
+  for (const pointerCid of [...new Set((Array.isArray(pointerCids) ? pointerCids : []).map(value => String(value || '').trim()).filter(Boolean))]) {
+    try {
+      const manifest = await fetchIndexManifest(pointerCid);
+      const boardCid = String(manifest?.replicaBoardCid || '').trim();
+      if (!boardCid || visitedBoards.has(boardCid)) continue;
+      visitedBoards.add(boardCid);
+      const board = await fetchOnlineReplicaBoard(boardCid);
+      claims.push(...board.claims);
+    } catch (error) {
+      console.warn('failed to aggregate replica claims for pointer', pointerCid, error);
+    }
+  }
+  return claims;
 }

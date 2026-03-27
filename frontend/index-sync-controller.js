@@ -14,13 +14,72 @@ import {
   getKnownPointerCids,
   discoverCommunityPointers,
   ensureDiscoveryRegistration,
+  aggregateOnlineReplicaClaimsForPointers,
 } from './community-index.js';
 import { renderCommunityIndexStatus, renderIpfsStatus, updateDashboard } from './view-renderers.js';
 import { syncLocalStrategies, get_strategies } from './community-strategy.js';
 import { state } from './state.js';
+import { getPinnedCids, getLastReplicaBoardUpdatedAt, getPublishedCids } from './ipfs-client.js';
+
+const ONLINE_REPLICA_HEARTBEAT_MS = 1000 * 60 * 3;
 
 export function createIndexSyncController({ renderCommunity }) {
   let communityIndex = loadLocalIndex();
+  let heartbeatTimer = null;
+
+  function shouldRefreshReplicaBoard(now = Date.now()) {
+    const lastUpdatedAt = getLastReplicaBoardUpdatedAt();
+    return !lastUpdatedAt || now - lastUpdatedAt >= ONLINE_REPLICA_HEARTBEAT_MS;
+  }
+
+  async function refreshOnlineReplicaHeartbeat() {
+    const hasReplicas = getPublishedCids().length > 0 || getPinnedCids().length > 0 || communityIndex.items.length > 0;
+    if (!hasReplicas || !shouldRefreshReplicaBoard()) return;
+    try {
+      const result = await publishIndexPointer(communityIndex);
+      communityIndex = result.index;
+      state.communitySync.lastPublishedPointerCid = result.cid;
+      state.communitySync.lastMessage = '已自动刷新在线副本声明';
+      await refreshStrategiesFromIndex(state.communitySync.lastMessage);
+    } catch (error) {
+      console.warn('failed to refresh online replica heartbeat', error);
+    }
+  }
+
+  function startOnlineReplicaHeartbeat() {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      refreshOnlineReplicaHeartbeat().catch(error => console.warn('heartbeat tick failed', error));
+    }, ONLINE_REPLICA_HEARTBEAT_MS);
+  }
+
+  async function syncCommunityPinSummary(index = communityIndex, knownPointers = []) {
+    const items = Array.isArray(index?.items) ? index.items : [];
+    const localPinned = new Set(getPinnedCids());
+    const claims = await aggregateOnlineReplicaClaimsForPointers(knownPointers);
+    const seenClaims = new Set();
+    const pinCounts = {};
+    for (const claim of claims) {
+      const cid = String(claim?.cid || '').trim();
+      const peerId = String(claim?.peerId || '').trim();
+      if (!cid || !peerId) continue;
+      const key = `${cid}::${peerId}`;
+      if (seenClaims.has(key)) continue;
+      seenClaims.add(key);
+      pinCounts[cid] = Number(pinCounts[cid] || 0) + 1;
+    }
+    for (const item of items) {
+      if (!item?.cid) continue;
+      if (item.pinned === true) pinCounts[item.cid] = Math.max(Number(pinCounts[item.cid] || 0), 1);
+      if (localPinned.has(item.cid)) pinCounts[item.cid] = Math.max(Number(pinCounts[item.cid] || 0), 1);
+    }
+    state.communityPins = {
+      pinCounts,
+      totalReplicas: Object.values(pinCounts).reduce((sum, value) => sum + Number(value || 0), 0),
+      replicatedStrategyCount: Object.keys(pinCounts).length,
+      updatedAt: Date.now(),
+    };
+  }
 
   function ensureLocalIndexInitialized() {
     communityIndex = saveLocalIndex(communityIndex);
@@ -33,6 +92,7 @@ export function createIndexSyncController({ renderCommunity }) {
     try {
       const strategies = await resolveIndexedStrategies(communityIndex);
       syncLocalStrategies(strategies);
+      await syncCommunityPinSummary(communityIndex, knownPointers);
       renderCommunity();
       updateDashboard({ state, getStrategies: get_strategies });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message, knownPointers);
@@ -40,6 +100,7 @@ export function createIndexSyncController({ renderCommunity }) {
     } catch (error) {
       console.error('failed to resolve indexed strategies', error);
       syncLocalStrategies([]);
+      await syncCommunityPinSummary(communityIndex, knownPointers);
       renderCommunity();
       updateDashboard({ state, getStrategies: get_strategies });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message || '本地索引已初始化，但远端社区数据暂不可读', knownPointers);
@@ -81,6 +142,7 @@ export function createIndexSyncController({ renderCommunity }) {
     const discovery = await discoverCommunityPointers();
     const result = await refreshFromKnownPointers();
     communityIndex = result.index;
+    await syncCommunityPinSummary(communityIndex, result.knownPointers || []);
     const baseMessage = discovery.pointerCid
       ? `已通过 Redis 发现共享入口：${discovery.pointerCid.slice(0, 16)}…`
       : discovery.knownPointers.length
@@ -107,6 +169,7 @@ export function createIndexSyncController({ renderCommunity }) {
       }
     }
     await refreshCommunityFromKnownPointers();
+    startOnlineReplicaHeartbeat();
   }
 
   async function publishCommunityIndexPointerAction() {
@@ -178,5 +241,6 @@ export function createIndexSyncController({ renderCommunity }) {
     hydratePointerInput,
     pinCommunityCid: pinCommunityCidAction,
     ensureLocalIndexInitialized,
+    refreshOnlineReplicaHeartbeat,
   };
 }
