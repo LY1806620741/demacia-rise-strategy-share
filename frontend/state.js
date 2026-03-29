@@ -14,6 +14,7 @@ export const state = {
     discoverySource: 'local',
     knownPointerCount: 0,
     redisRegistered: false,
+    autoWriteReason: '未检查',
   },
   ipfs: {
     ready: false,

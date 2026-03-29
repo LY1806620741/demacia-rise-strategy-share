@@ -142,7 +142,8 @@ export function renderCommunityIndexStatus(index, pointerCid = '', message = '',
     ? `本机提供状态：<span style="color:${state.ipfs.canProvide ? '#8bc34a' : '#ffd54f'};">${escapeHtml(state.ipfs.providerStatus || (state.ipfs.canProvide ? '在线，可提供社区数据' : '已连接，待发布后可提供'))}</span><br>`
     : `本机提供状态：<span style="color:#ff8a80;">IPFS 未连接</span><br>`;
   const discoveryLine = `发现方式：${escapeHtml(state.communitySync.discoverySource || 'local')}${state.communitySync.redisRegistered ? '（已登记 Redis 引导）' : ''}<br>`;
+  const autoWriteLine = `自动写入状态：${escapeHtml(state.communitySync.autoWriteReason || '未检查')}<br>`;
   const communityPinsLine = `在线副本总数：${Number(state.communityPins?.totalReplicas || 0)}<br>存在在线副本的策略：${Number(state.communityPins?.replicatedStrategyCount || 0)}<br>`;
   const messageLine = message ? `<div style="margin-top:.35rem;color:#9fd3ff;">${escapeHtml(message)}</div>` : '';
-  container.innerHTML = `本地索引条目：${itemCount}<br>已固定条目：${pinnedCount}<br>${pointerLine}${knownLine}${providerLine}${discoveryLine}${communityPinsLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
+  container.innerHTML = `本地索引条目：${itemCount}<br>已固定条目：${pinnedCount}<br>${pointerLine}${knownLine}${providerLine}${discoveryLine}${autoWriteLine}${communityPinsLine}最近更新：${escapeHtml(updatedAt)}${messageLine}`;
 }
