@@ -13,7 +13,7 @@ function createFrontendState() {
       lastMessage: '未同步社区索引',
       discoverySource: 'local',
       knownPointerCount: 0,
-      redisRegistered: false,
+      autoWriteReason: '未检查',
     },
     networkConfig: {
       communitySearchEnabled: true,
@@ -31,6 +31,6 @@ assert.deepEqual(state.selectedCounterUnits, [], '初始不应预置应对单位
 assert.equal(state.strategyNotes, '', '策略描述应默认为空字符串');
 assert.equal(state.communitySync.lastMessage, '未同步社区索引', '社区索引同步状态应有明确初始文案');
 assert.equal(state.communitySync.discoverySource, 'local', '默认发现来源应为本地');
-assert.equal(state.communitySync.redisRegistered, false, '默认不应视为已注册 Redis 引导');
+assert.equal(state.communitySync.autoWriteReason, '未检查', '默认应保留自动候选入口状态文案');
 
 console.log('frontend-state defaults: ok');

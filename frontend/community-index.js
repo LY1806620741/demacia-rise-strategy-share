@@ -9,114 +9,41 @@ import {
   uploadOnlineReplicaBoard,
   fetchOnlineReplicaBoard,
   getPinnedCids,
+  fetchIpnsJson,
 } from './ipfs-client.js';
-import { getRedisWriteToken } from './redis-write-guard.js';
 import { state, DISCOVERY_RECORD_TTL_MS } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
 const LAST_POINTER_KEY = 'community_index_last_pointer_cid';
 const KNOWN_POINTERS_KEY = 'community_index_known_pointers_v2';
 const DISCOVERY_SOURCE_KEY = 'community_discovery_source_v1';
-const REDIS_DISCOVERY_KEY = 'community:latest-pointer-record';
+const DEFAULT_IPNS_NAME = 'community-pointer.json';
 
-function getRedisConfig() {
-  const redis = state?.config?.community?.upstash_redis || {};
-  return {
-    url: String(redis.url || '').trim(),
-    token: String(redis.token || '').trim(),
-    writeToken: getRedisWriteToken(),
-    key: String(redis.key || REDIS_DISCOVERY_KEY).trim() || REDIS_DISCOVERY_KEY,
-  };
-}
-
-function withAuth(headers = {}, mode = 'read') {
-  const redis = getRedisConfig();
-  const token = mode === 'write' ? redis.writeToken : redis.token;
-  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
-}
-
-function createDiscoveryRecord(pointerCid, extra = {}) {
-  return {
-    version: 1,
-    pointerCid: String(pointerCid || '').trim(),
-    updatedAt: Date.now(),
-    peerId: String(extra.peerId || state?.ipfs?.peerId || '').trim(),
-    providerStatus: String(extra.providerStatus || state?.ipfs?.providerStatus || '').trim(),
-    source: String(extra.source || 'redis-fallback').trim(),
-  };
-}
-
-function normalizeDiscoveryRecord(raw = {}, extra = {}) {
+function normalizePointerCandidatesManifest(raw = {}, extra = {}) {
+  const currentPointerCid = String(raw?.currentPointerCid || raw?.current_pointer_cid || '').trim();
+  const fallbackPointerCids = Array.isArray(raw?.fallbackPointerCids || raw?.fallback_pointer_cids)
+    ? (raw.fallbackPointerCids || raw.fallback_pointer_cids).map(value => String(value || '').trim()).filter(Boolean)
+    : [];
   return {
     version: Number(raw?.version || 1),
-    pointerCid: String(raw?.pointerCid || raw?.current_pointer_cid || '').trim(),
     updatedAt: Number(raw?.updatedAt || 0),
-    peerId: String(raw?.peerId || '').trim(),
-    providerStatus: String(raw?.providerStatus || '').trim(),
-    source: String(extra.source || raw?.source || 'unknown').trim(),
+    currentPointerCid,
+    fallbackPointerCids,
+    source: String(extra.source || raw?.source || 'ipns').trim(),
     error: String(extra.error || '').trim(),
   };
 }
 
-function isFreshDiscoveryRecord(record) {
-  return !!record?.pointerCid && Number(record?.updatedAt || 0) > (Date.now() - DISCOVERY_RECORD_TTL_MS);
+function isFreshPointerCandidatesManifest(manifest) {
+  return !!manifest?.currentPointerCid && Number(manifest?.updatedAt || 0) > (Date.now() - DISCOVERY_RECORD_TTL_MS);
 }
 
-export async function fetchRedisDiscoveryRecord() {
-  const redis = getRedisConfig();
-  if (!redis.url) {
-    console.info('[community-discovery] redis disabled: missing url');
-    return normalizeDiscoveryRecord({}, { source: 'redis', error: 'missing redis url' });
-  }
-  try {
-    console.info('[community-discovery] reading redis discovery record', { key: redis.key, url: redis.url });
-    const response = await fetch(`${redis.url}/get/${encodeURIComponent(redis.key)}`, {
-      headers: withAuth({}, 'read'),
-      cache: 'no-store',
-    });
-    if (!response.ok) throw new Error(`redis http ${response.status}`);
-    const payload = await response.json();
-    if (!payload?.result) {
-      console.info('[community-discovery] redis discovery record empty');
-      return normalizeDiscoveryRecord({}, { source: 'redis', error: 'empty redis record' });
-    }
-    const parsed = typeof payload.result === 'string' ? JSON.parse(payload.result) : payload.result;
-    const normalized = normalizeDiscoveryRecord(parsed, { source: 'redis' });
-    console.info('[community-discovery] redis discovery record loaded', normalized);
-    return normalized;
-  } catch (error) {
-    console.warn('[community-discovery] failed to read redis discovery record', error);
-    return normalizeDiscoveryRecord({}, { source: 'redis', error: error?.message || 'failed to fetch redis record' });
-  }
-}
-
-export async function publishRedisDiscoveryRecord(pointerCid, extra = {}) {
-  const normalizedCid = String(pointerCid || '').trim();
-  if (!normalizedCid) return { ok: false, error: 'missing pointer cid' };
-  const redis = getRedisConfig();
-  if (!redis.url) return { ok: false, error: 'missing redis url' };
-  if (!redis.writeToken) return { ok: false, error: 'missing redis write token' };
-  const record = createDiscoveryRecord(normalizedCid, extra);
-  try {
-    console.info('[community-discovery] writing redis discovery record', {
-      key: redis.key,
-      pointerCid: normalizedCid,
-      peerId: record.peerId,
-      providerStatus: record.providerStatus,
-    });
-    const response = await fetch(`${redis.url}/set/${encodeURIComponent(redis.key)}`, {
-      method: 'POST',
-      headers: withAuth({ 'Content-Type': 'application/json' }, 'write'),
-      body: JSON.stringify({ value: JSON.stringify(record) }),
-    });
-    if (!response.ok) throw new Error(`redis set http ${response.status}`);
-    localStorage.setItem(DISCOVERY_SOURCE_KEY, 'redis');
-    console.info('[community-discovery] redis discovery record write success', record);
-    return { ok: true, record };
-  } catch (error) {
-    console.warn('[community-discovery] redis discovery record write failed', error, record);
-    return { ok: false, error: error?.message || 'failed to publish redis record', record };
-  }
+async function fetchIpnsPointerCandidatesManifest() {
+  const configured = state?.config?.community || {};
+  const ipnsName = String(configured.default_ipns_name || DEFAULT_IPNS_NAME).trim();
+  const result = await fetchIpnsJson(ipnsName);
+  if (!result.ok) return normalizePointerCandidatesManifest({}, { source: 'ipns', error: result.error || 'ipns unavailable' });
+  return normalizePointerCandidatesManifest(result.data, { source: 'ipns' });
 }
 
 function loadKnownPointers() {
@@ -144,6 +71,7 @@ export function createEmptyIndex() {
     version: 2,
     updatedAt: Date.now(),
     sourceCid: '',
+    replicaBoardCid: '',
     items: [],
   };
 }
@@ -197,24 +125,23 @@ export async function setLastPointerCid(cid) {
 }
 
 export async function discoverCommunityPointers() {
-  const redisRecord = await fetchRedisDiscoveryRecord();
+  const ipnsManifest = await fetchIpnsPointerCandidatesManifest();
   const pointers = [...new Set([
-    isFreshDiscoveryRecord(redisRecord) ? redisRecord.pointerCid : '',
+    isFreshPointerCandidatesManifest(ipnsManifest) ? ipnsManifest.currentPointerCid : '',
+    ...ipnsManifest.fallbackPointerCids,
     getLastPointerCid(),
     ...getPublishedCids(),
     ...getConfiguredDefaultPointers(),
     ...loadKnownPointers(),
   ].filter(Boolean))];
-
-  const source = isFreshDiscoveryRecord(redisRecord)
-    ? 'redis'
+  const source = isFreshPointerCandidatesManifest(ipnsManifest)
+    ? 'ipns'
     : (pointers.length ? (localStorage.getItem(DISCOVERY_SOURCE_KEY) || 'local') : 'empty');
-
   return {
     source,
-    pointerCid: isFreshDiscoveryRecord(redisRecord) ? redisRecord.pointerCid : '',
+    pointerCid: isFreshPointerCandidatesManifest(ipnsManifest) ? ipnsManifest.currentPointerCid : '',
     knownPointers: pointers,
-    redisRecord,
+    ipnsManifest,
     hasNetworkEntry: pointers.length > 0,
   };
 }
@@ -222,34 +149,20 @@ export async function discoverCommunityPointers() {
 export async function ensureDiscoveryRegistration(pointerCid = '') {
   const discovery = await discoverCommunityPointers();
   const effectivePointerCid = String(pointerCid || getLastPointerCid() || getPublishedCids()[0] || '').trim();
-  console.info('[community-discovery] ensureDiscoveryRegistration', {
+  console.info('[community-discovery] ensureDiscoveryRegistration(IPNS)', {
     hasNetworkEntry: discovery.hasNetworkEntry,
     pointerCid: effectivePointerCid,
     source: discovery.source,
     knownPointerCount: discovery.knownPointers.length,
   });
   if (discovery.hasNetworkEntry || !effectivePointerCid) {
-    console.info('[community-discovery] skip registration', {
-      reason: discovery.hasNetworkEntry ? 'network-entry-exists' : 'missing-pointer',
-    });
     return { ok: false, skipped: true, reason: discovery.hasNetworkEntry ? 'network-entry-exists' : 'missing-pointer', discovery };
   }
-  const ipfsStatus = await getIpfsStatus();
-  const result = await publishRedisDiscoveryRecord(effectivePointerCid, {
-    peerId: ipfsStatus.id,
-    providerStatus: ipfsStatus.providerStatus,
-    source: 'redis-bootstrap',
-  });
-  if (result.ok) {
-    saveKnownPointers([effectivePointerCid, ...loadKnownPointers()]);
-    state.communitySync.redisRegistered = true;
-    state.communitySync.discoverySource = 'redis';
-    state.communitySync.lastMessage = '当前未发现在线社区入口，已自动写入 Redis 作为首个入口';
-    console.info('[community-discovery] registration success', { pointerCid: effectivePointerCid });
-  } else {
-    console.warn('[community-discovery] registration failed', result);
-  }
-  return { ...result, discovery: await discoverCommunityPointers() };
+  saveKnownPointers([effectivePointerCid, ...loadKnownPointers()]);
+  localStorage.setItem(DISCOVERY_SOURCE_KEY, 'ipns-local-seed');
+  state.communitySync.discoverySource = 'ipns';
+  state.communitySync.lastMessage = '未发现 IPNS 社区入口，已使用本地 pointer 作为候选入口';
+  return { ok: true, localOnly: true, pointerCid: effectivePointerCid, discovery: await discoverCommunityPointers() };
 }
 
 export async function getKnownPointerCids() {

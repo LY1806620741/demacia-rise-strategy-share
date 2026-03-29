@@ -23,14 +23,14 @@ import { getPinnedCids, getLastReplicaBoardUpdatedAt, getPublishedCids } from '.
 
 const ONLINE_REPLICA_HEARTBEAT_MS = 1000 * 60 * 3;
 
+function shouldRefreshReplicaBoard(now = Date.now()) {
+  const lastUpdatedAt = getLastReplicaBoardUpdatedAt();
+  return !lastUpdatedAt || now - lastUpdatedAt >= ONLINE_REPLICA_HEARTBEAT_MS;
+}
+
 export function createIndexSyncController({ renderCommunity }) {
   let communityIndex = loadLocalIndex();
   let heartbeatTimer = null;
-
-  function shouldRefreshReplicaBoard(now = Date.now()) {
-    const lastUpdatedAt = getLastReplicaBoardUpdatedAt();
-    return !lastUpdatedAt || now - lastUpdatedAt >= ONLINE_REPLICA_HEARTBEAT_MS;
-  }
 
   async function shouldAttemptAutoWrite(now = Date.now()) {
     const discovery = await discoverCommunityPointers();
@@ -40,11 +40,11 @@ export function createIndexSyncController({ renderCommunity }) {
     const heartbeatDue = shouldRefreshReplicaBoard(now);
 
     if (!hasReplicas) return { ok: false, reason: '没有可提供的社区内容' };
-    if (discovery.hasNetworkEntry) return { ok: false, reason: '已发现社区入口，无需写入 Redis' };
+    if (discovery.hasNetworkEntry) return { ok: false, reason: '已发现 IPNS 社区入口，无需创建本地候选入口' };
     if (!ipfsReady) return { ok: false, reason: 'IPFS 未就绪' };
     if (!canProvide) return { ok: false, reason: '当前节点尚不可提供社区数据' };
     if (!heartbeatDue) return { ok: false, reason: '心跳时间未到，暂不刷新' };
-    return { ok: true, reason: '满足自动写入条件' };
+    return { ok: true, reason: '满足本地候选入口刷新条件' };
   }
 
   async function refreshOnlineReplicaHeartbeat() {
@@ -59,7 +59,7 @@ export function createIndexSyncController({ renderCommunity }) {
       state.communitySync.autoWriteReason = '自动刷新在线副本声明成功';
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
-      state.communitySync.autoWriteReason = `自动写入失败：${error?.message || '未知错误'}`;
+      state.communitySync.autoWriteReason = `自动刷新失败：${error?.message || '未知错误'}`;
       console.warn('failed to refresh online replica heartbeat', error);
     }
   }
@@ -77,6 +77,7 @@ export function createIndexSyncController({ renderCommunity }) {
     const claims = await aggregateOnlineReplicaClaimsForPointers(knownPointers);
     const seenClaims = new Set();
     const pinCounts = {};
+
     for (const claim of claims) {
       const cid = String(claim?.cid || '').trim();
       const peerId = String(claim?.peerId || '').trim();
@@ -86,11 +87,13 @@ export function createIndexSyncController({ renderCommunity }) {
       seenClaims.add(key);
       pinCounts[cid] = Number(pinCounts[cid] || 0) + 1;
     }
+
     for (const item of items) {
       if (!item?.cid) continue;
       if (item.pinned === true) pinCounts[item.cid] = Math.max(Number(pinCounts[item.cid] || 0), 1);
       if (localPinned.has(item.cid)) pinCounts[item.cid] = Math.max(Number(pinCounts[item.cid] || 0), 1);
     }
+
     state.communityPins = {
       pinCounts,
       totalReplicas: Object.values(pinCounts).reduce((sum, value) => sum + Number(value || 0), 0),
@@ -161,11 +164,14 @@ export function createIndexSyncController({ renderCommunity }) {
     const result = await refreshFromKnownPointers();
     communityIndex = result.index;
     await syncCommunityPinSummary(communityIndex, result.knownPointers || []);
-    const baseMessage = discovery.pointerCid
-      ? `已通过 Redis 发现共享入口：${discovery.pointerCid.slice(0, 16)}…`
-      : discovery.knownPointers.length
-        ? '已通过本地/配置入口检查社区共享索引'
-        : '暂未发现在线社区入口，可在首次发布后自动登记';
+
+    let baseMessage = '暂未发现社区入口，可先发布本地候选入口';
+    if (discovery.pointerCid) {
+      baseMessage = `已通过 IPNS 发现共享入口：${discovery.pointerCid.slice(0, 16)}…`;
+    } else if (discovery.knownPointers.length) {
+      baseMessage = '已通过本地/IPNS 候选入口检查社区共享索引';
+    }
+
     state.communitySync.lastMessage = result.added
       ? `${baseMessage}，并新增 ${result.added} 条社区内容`
       : `${baseMessage}，暂无新增`;
@@ -178,22 +184,29 @@ export function createIndexSyncController({ renderCommunity }) {
     const discovery = await discoverCommunityPointers();
     state.communitySync.discoverySource = discovery.source;
     state.communitySync.knownPointerCount = discovery.knownPointers.length;
+
     const ipfsReady = state.ipfs.ready === true;
     const canProvide = state.ipfs.canProvide === true || getPublishedCids().length > 0;
+
     if (!discovery.hasNetworkEntry && ipfsReady && canProvide) {
       const registration = await ensureDiscoveryRegistration();
       if (registration.ok) {
-        state.communitySync.lastMessage = '未发现在线入口，已自动通过 Redis 建立首个社区入口';
-        state.communitySync.autoWriteReason = '首访建网成功，已写入 Redis';
-      } else if (!registration.skipped) {
-        state.communitySync.lastMessage = '未发现在线入口，且 Redis 注册失败；当前仅可使用本地社区数据';
-        state.communitySync.autoWriteReason = `首访建网失败：${registration.error || '未知错误'}`;
+        state.communitySync.lastMessage = '未发现 IPNS 社区入口，已建立本地候选入口';
+        state.communitySync.autoWriteReason = '本地候选入口已准备，可用于共享';
+      } else if (registration.skipped === true) {
+        state.communitySync.autoWriteReason = `跳过本地候选入口：${registration.reason || '条件不满足'}`;
       } else {
-        state.communitySync.autoWriteReason = `跳过首访建网：${registration.reason || '条件不满足'}`;
+        state.communitySync.lastMessage = '未发现 IPNS 社区入口，且本地候选入口准备失败';
+        state.communitySync.autoWriteReason = `本地候选入口失败：${registration.error || '未知错误'}`;
       }
+    } else if (discovery.hasNetworkEntry) {
+      state.communitySync.autoWriteReason = '已存在社区网络入口';
+    } else if (ipfsReady !== true) {
+      state.communitySync.autoWriteReason = 'IPFS 未就绪';
     } else {
-      state.communitySync.autoWriteReason = discovery.hasNetworkEntry ? '已存在社区网络入口' : (!ipfsReady ? 'IPFS 未就绪' : '当前节点暂无可提供内容');
+      state.communitySync.autoWriteReason = '当前节点暂无可提供内容';
     }
+
     await refreshCommunityFromKnownPointers();
     startOnlineReplicaHeartbeat();
   }
@@ -203,7 +216,7 @@ export function createIndexSyncController({ renderCommunity }) {
       const result = await publishIndexPointer(communityIndex);
       communityIndex = result.index;
       state.communitySync.lastPublishedPointerCid = result.cid;
-      state.communitySync.lastMessage = '本地索引已发布；若网络暂无其他入口，将自动登记为共享发现入口';
+      state.communitySync.lastMessage = '本地索引已发布，并更新本地候选入口';
       const input = byId('community-index-pointer-input');
       if (input) input.value = result.cid;
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
