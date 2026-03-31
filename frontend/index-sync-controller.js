@@ -16,6 +16,7 @@ import {
   ensureDiscoveryRegistration,
   aggregateOnlineReplicaClaimsForPointers,
 } from './community-index.js';
+import { logDebug, logWarn, logError } from './debug.js';
 import { renderCommunityIndexStatus, renderIpfsStatus, updateDashboard } from './view-renderers.js';
 import { syncLocalStrategies, get_strategies } from './community-strategy.js';
 import { state } from './state.js';
@@ -67,7 +68,7 @@ export function createIndexSyncController({ renderCommunity }) {
   function startOnlineReplicaHeartbeat() {
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     heartbeatTimer = setInterval(() => {
-      refreshOnlineReplicaHeartbeat().catch(error => console.warn('heartbeat tick failed', error));
+      refreshOnlineReplicaHeartbeat().catch(error => logWarn('community-sync', 'heartbeat tick failed', { error: error?.message || String(error) }));
     }, ONLINE_REPLICA_HEARTBEAT_MS);
   }
 
@@ -118,8 +119,9 @@ export function createIndexSyncController({ renderCommunity }) {
       updateDashboard({ state, getStrategies: get_strategies });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), message, knownPointers);
       await renderIpfsStatus();
+      logDebug('community-sync', '社区策略刷新完成', { strategyCount: strategies.length, knownPointerCount: knownPointers.length });
     } catch (error) {
-      console.error('failed to resolve indexed strategies', error);
+      logError('community-sync', '社区策略刷新失败', { error: error?.message || String(error) });
       syncLocalStrategies([]);
       await syncCommunityPinSummary(communityIndex, knownPointers);
       renderCommunity();
@@ -148,13 +150,15 @@ export function createIndexSyncController({ renderCommunity }) {
       return;
     }
     try {
+      logDebug('community-sync', '开始手动同步 pointer', { pointerCid });
       const result = await importIndexFromPointer(pointerCid);
       communityIndex = result.index;
       state.communitySync.lastImportedPointerCid = pointerCid;
       state.communitySync.lastMessage = `已从共享入口同步，新增 ${result.added} 条`;
+      logDebug('community-sync', '手动同步 pointer 完成', result);
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
-      console.error('failed to sync community index from pointer', error);
+      logWarn('community-sync', '手动同步 pointer 失败', { pointerCid, error: error?.message || String(error) });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '同步失败：pointer 无效或远端索引不可读', await getKnownPointerCids());
     }
   }
@@ -182,6 +186,7 @@ export function createIndexSyncController({ renderCommunity }) {
 
   async function bootstrapCommunityNetwork() {
     const discovery = await discoverCommunityPointers();
+    logDebug('community-sync', '启动时检查社区网络', discovery);
     state.communitySync.discoverySource = discovery.source;
     state.communitySync.knownPointerCount = discovery.knownPointers.length;
 
@@ -209,31 +214,36 @@ export function createIndexSyncController({ renderCommunity }) {
 
     await refreshCommunityFromKnownPointers();
     startOnlineReplicaHeartbeat();
+    logDebug('community-sync', '社区网络启动流程完成', { autoWriteReason: state.communitySync.autoWriteReason, discoverySource: state.communitySync.discoverySource });
   }
 
   async function publishCommunityIndexPointerAction() {
     try {
+      logDebug('community-sync', '开始手动发布本地索引', { itemCount: communityIndex.items.length });
       const result = await publishIndexPointer(communityIndex);
       communityIndex = result.index;
       state.communitySync.lastPublishedPointerCid = result.cid;
       state.communitySync.lastMessage = '本地索引已发布，并更新本地候选入口';
       const input = byId('community-index-pointer-input');
       if (input) input.value = result.cid;
+      logDebug('community-sync', '手动发布本地索引成功', result);
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
-      console.error('failed to publish community index pointer', error);
+      logWarn('community-sync', '手动发布本地索引失败', { error: error?.message || String(error) });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '发布索引失败', await getKnownPointerCids());
     }
   }
 
   async function pinCommunityCidAction(cid) {
     try {
+      logDebug('community-sync', '开始固定社区内容', { cid });
       const result = await pinIndexedCid(cid);
       state.communitySync.lastMessage = `已标记并固定 ${result.cid}`;
       communityIndex = saveLocalIndex(loadLocalIndex());
+      logDebug('community-sync', '固定社区内容完成', result);
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
-      console.error('failed to pin community cid', error);
+      logWarn('community-sync', '固定社区内容失败', { cid, error: error?.message || String(error) });
       renderCommunityIndexStatus(communityIndex, getLastPointerCid(), '固定失败', await getKnownPointerCids());
     }
   }

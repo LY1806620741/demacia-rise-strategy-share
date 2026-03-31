@@ -20,7 +20,7 @@
 - 用户先输入敌人阵容
 - 系统优先展示官方推荐，并可附带社区相似策略
 - 若没有合适方案，用户补充应对阵容、研究与描述
-- 用户可将策略发布到社区，并通过指针 CID 同步索引
+- 用户可将策略发布到社区，并通过 IPNS 公告板维护社区索引入口
 
 交互原则：
 - 搜索优先，录入其次
@@ -47,13 +47,12 @@ index.html
 - `frontend/search-controller.js`：敌人阵容搜索、投票、输入联动
 - `frontend/index-sync-controller.js`：社区索引导入、导出、发布、同步
 - `frontend/community-strategy.js`：社区策略创建、缓存、推荐、投票
-- `frontend/community-index.js`：本地索引与指针 CID 机制
-- `frontend/ipfs-client.js`：Helia / IPFS 读写封装
+- `frontend/community-index.js`：本地索引、IPNS pointer candidates 与候选入口机制
+- `frontend/ipfs-client.js`：Helia / IPFS / IPNS 读写封装
 - `frontend/strategy-schema.js`：社区策略统一数据结构
 - `frontend/config-ui.js`：研究、敌人单位、应对单位选择 UI
 - `frontend/enemy-lineup.js`：敌人阵容文本解析与编辑
 - `frontend/enemy-search.js`：官方 / 社区相似策略匹配
-- `frontend/data.js`：配置数据读取
 - `frontend/state.js`：前端状态
 - `frontend/view-renderers.js`：渲染逻辑
 - `frontend/unit-tooltips.js`：单位说明提示
@@ -63,7 +62,7 @@ index.html
 以下内容不再是当前运行架构的一部分：
 - Rust / WASM 运行时入口
 - libp2p / Swarm 组网
-- 本地 P2P 节点状态展示
+- Redis 冷启动发现层
 
 ---
 
@@ -98,7 +97,7 @@ index.html
 4. 补充自己的应对阵容、研究与策略描述
 5. 发布社区策略到 IPFS
 6. 将新策略写入本地社区索引
-7. 通过指针 CID 分享或同步社区索引
+7. 通过 IPNS 公告板与本地候选入口同步社区索引
 
 ### 5.2 当前重点字段
 - 敌人阵容
@@ -117,22 +116,22 @@ index.html
 - 社区策略创建、展示、点赞 / 点踩
 - 社区策略本地全文检索
 - 本地社区索引持久化
-- 指针 CID 发布与同步
+- IPNS pointer candidates 入口发现
 - 社区索引导入 / 导出
 - 浏览器端 Helia / IPFS 状态展示
+- 在线副本声明与聚合显示
 
 ### 6.2 当前社区同步方式
 当前社区数据共享方式为：
 - 浏览器端 Helia / IPFS 存储社区策略 JSON
 - 本地索引记录已知策略 CID
-- 通过“指针 CID”分享一份索引清单
-- 其他用户导入或同步该指针 CID 后合并社区内容
+- IPNS 公告板维护 `pointer candidates manifest`
+- 其他用户优先读取 `current_pointer_cid`，再回退 `fallback_pointer_cids` 与本地候选入口
 
 ### 6.3 当前能力边界
 当前不具备：
-- 自动全网发现新内容
+- 自动发布可写 IPNS 根入口
 - 浏览器之间自动公网组网
-- 无需分享指针 CID 的自动同步
 - 完整信誉系统与反刷机制
 
 ---
@@ -187,18 +186,19 @@ index.html
 - 前端：原生 HTML / CSS / JS
 - 内容存储：Helia + UnixFS
 - 本地持久化：`localStorage`
+- 入口发现：IPNS 公告板 + 本地候选入口
 - 部署方式：GitHub Pages / 任意静态站点
 
 ### 9.2 当前架构关键词
 - 纯前端
 - 无自建后端
 - Helia / IPFS
-- 指针 CID
+- IPNS pointer candidates manifest
 - 社区索引同步
 - 官方 + 社区混合搜索
 
 ### 9.3 未来目标
-- 多指针来源合并
+- 多 IPNS 来源合并
 - 更强的社区排序与检索
 - 更稳定的内容传播方式
 - 更完整的社区治理与质量控制

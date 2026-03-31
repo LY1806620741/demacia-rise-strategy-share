@@ -305,8 +305,9 @@ export async function aggregateOnlineReplicaClaims(index) {
     try {
       const board = await fetchOnlineReplicaBoard(boardCid);
       claims.push(...board.claims);
+      logDebug('community-replica', '在线副本声明板读取成功', { boardCid, claimCount: board.claims.length });
     } catch (error) {
-      console.warn('failed to fetch online replica board', boardCid, error);
+      logWarn('community-replica', '在线副本声明板读取失败', { boardCid, error: error?.message || String(error) });
     }
   }
   return claims;
@@ -316,6 +317,7 @@ export async function aggregateOnlineReplicaClaimsForPointers(pointerCids = []) 
   const claims = [];
   const visitedBoards = new Set();
   const normalizedPointers = [...new Set((Array.isArray(pointerCids) ? pointerCids : []).map(value => String(value || '').trim()).filter(Boolean))];
+  logDebug('community-replica', '开始聚合在线副本声明', { pointerCount: normalizedPointers.length, pointers: normalizedPointers });
   for (const pointerCid of normalizedPointers) {
     try {
       const manifest = await fetchIndexManifest(pointerCid);
@@ -324,9 +326,11 @@ export async function aggregateOnlineReplicaClaimsForPointers(pointerCids = []) 
       visitedBoards.add(boardCid);
       const board = await fetchOnlineReplicaBoard(boardCid);
       claims.push(...board.claims);
+      logDebug('community-replica', 'pointer 在线副本声明聚合成功', { pointerCid, boardCid, claimCount: board.claims.length });
     } catch (error) {
-      console.warn('failed to aggregate replica claims for pointer', pointerCid, error);
+      logWarn('community-replica', 'pointer 在线副本声明聚合失败', { pointerCid, error: error?.message || String(error) });
     }
   }
+  logDebug('community-replica', '在线副本声明聚合完成', { totalClaims: claims.length });
   return claims;
 }

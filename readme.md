@@ -220,83 +220,45 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 当前推荐的社区发现模型：
 
 - **内容存储/拉取**：Helia + IPFS
-- **冷启动发现**：Upstash Redis 固定 key，保存最新 pointer CID
-- **浏览器前端**：默认只读 Redis，不暴露写 token
-- **写入入口**：GitHub Action 使用仓库 Secrets 写 Redis
+- **入口发现**：IPNS 公告板，维护 `pointer candidates manifest`
+- **候选字段**：
+  - `current_pointer_cid`
+  - `fallback_pointer_cids`
+- **本地回退**：本地候选入口 + 已发布 pointer + 默认 pointer 列表
 
 这意味着：
 
 1. 浏览器负责发布社区内容到 IPFS
-2. 浏览器或用户拿到最新 pointer CID
-3. 通过 GitHub Action 将 pointer CID 写入 Redis
-4. 其他浏览器打开页面后，读取 Redis 中的最新 pointer 并拉取社区索引
+2. 浏览器发布本地索引后得到新的 pointer CID
+3. IPNS 公告板优先给出 `current_pointer_cid`
+4. 如无可用 current，则回退 `fallback_pointer_cids` 和本地候选入口
+5. 其他浏览器据此拉取社区索引并同步社区内容
 
-这样可以避免把 Redis 写权限暴露到 GitHub Pages 前端代码中。
+## Default IPNS Pointer Candidates Manifest
 
-## GitHub Action: Publish Pointer to Redis
+默认文件：
 
-仓库已包含工作流：
+- `community-pointer.json`
 
-- `.github/workflows/publish-community-pointer.yml`
+当前结构：
 
-脚本入口：
+```json
+{
+  "version": 1,
+  "updatedAt": 0,
+  "current_pointer_cid": "",
+  "fallback_pointer_cids": []
+}
+```
 
-- `scripts/publish-pointer-to-redis.mjs`
+前端会优先解析：
+- `current_pointer_cid`
 
-### 需要配置的 GitHub Secrets
-
-在仓库设置中添加：
-
-- `UPSTASH_REDIS_URL`
-- `UPSTASH_REDIS_WRITE_TOKEN`
-- `UPSTASH_REDIS_KEY`（可选，不填时默认 `community:latest-pointer-record`）
-
-### 触发方式
-
-在 GitHub Actions 页面手动触发：
-
-- `pointer_cid`: 新发布的社区索引 pointer CID
-- `pointer_source`: 可选，默认 `github-action`
-
-### 前端配置
-
-前端 `config.json` 中只保留：
-
-- `url`
-- `readonly token`
-- `key`
-
-不要把写 token 提交到仓库或放入静态前端资源。
-
-## OrbitDB 可行性结论
-
-对于这个项目当前的目标：
-
-- GitHub Pages 静态托管
-- 浏览器作为主要节点
-- 所有节点都可能全部离线
-- 需要下一次访问时自动恢复发现能力
-
-**OrbitDB 不适合作为冷启动发现层的替代品。**
-
-原因：
-
-1. OrbitDB 仍然依赖底层 IPFS/libp2p 可达性
-2. 所有浏览器节点都离线后，没有稳定在线锚点时，新的浏览器节点仍然不知道该去发现谁
-3. 浏览器环境不具备长期稳定监听、长期保活、稳定网络地址等条件
-4. OrbitDB 更适合“已有可达网络后的协作复制”，不适合“无锚点冷启动发现”
-
-### 适合当前项目的判断
-
-- **可用**：Redis 作为最新 pointer 冷启动发现层
-- **可用**：Helia/IPFS 作为社区正文与索引内容分发层
-- **可选灾备**：保留静态 `community-pointer.json` 作为人工恢复入口
-- **不推荐主用**：OrbitDB 替代 Redis 负责所有节点离线后的重新组网
-
-简单说：
-
-- OrbitDB 可以作为未来“在线节点之间的协作数据库层”候选
-- 但不能解决“所有节点都离线后，下一台浏览器如何知道入口”的问题
+并在需要时继续使用：
+- `fallback_pointer_cids`
+- 本地 `lastPointerCid`
+- 已发布 pointer
+- 配置 `default_pointer_cids`
 
 ---
 
@@ -305,15 +267,15 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 当前架构仍有几个现实限制：
 
 1. 浏览器端 Helia 的内容传播能力受浏览器网络环境限制
-2. 社区内容的冷启动发现当前依赖 Redis 中保存的最新 pointer
-3. 没有自建后端，但仍需要 GitHub Action 或其他受控写入入口维护 Redis 最新 pointer
+2. 根 IPNS 公告板本身当前仍是静态入口文件，不支持浏览器端自动可写更新
+3. 浏览器之间不保证自动公网直连组网
 4. 不同浏览器、不同网络环境下的节点可达性可能不同
 
 换句话说：
 
 - **内容存储可以去中心化**
-- **冷启动发现仍需要一个稳定锚点**
-- **OrbitDB 不能单独解决浏览器全离线后的再次发现问题**
+- **入口发现已切换到 IPNS 公告板 + 本地候选入口**
+- **根公告板仍需要外部维护或预置静态入口**
 
 ---
 
@@ -325,11 +287,11 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 
 ### 社区内容会自动被所有节点发现吗？
 
-不会。当前版本已经支持通过“指针 CID”同步社区索引，但**索引 CID 仍需要被分享**，还没有实现全自动的全网发现。
+当前版本会优先读取 IPNS 公告板中的 pointer candidates manifest，并回退本地候选入口；仍不保证在所有浏览器和网络环境下实现全自动发现。
 
-### 为什么不用传统数据库？
+### 为什么不再使用 Redis？
 
-项目目标之一就是在无后端条件下，探索社区内容共享与浏览的最小可行路径。
+当前实现已经切换到 `IPNS -> pointer candidates manifest`，减少了中心化发现层依赖，并把社区入口逻辑统一到公告板模型。
 
 ### 适合部署到哪里？
 
@@ -342,11 +304,10 @@ github pages: https://ly1806620741.github.io/demacia-rise-strategy-share/
 - [x] 从 `ipfs-core` 迁移到 Helia
 - [x] 社区索引本地持久化
 - [x] 共享 pointer CID 同步与索引导入导出
-- [x] Upstash Redis 只读发现接入
-- [x] GitHub Action 发布最新 pointer 到 Redis
-- [ ] 在 UI 中增加“一键复制 pointer 并提示去 Actions 发布”流程
-- [ ] 增加 Redis 发现记录格式校验与坏数据回退提示
-- [ ] 更强的社区搜索排序
+- [x] 切换到 `IPNS -> pointer candidates manifest` 发现模型
+- [x] 在线副本声明与聚合显示
+- [ ] 支持多 IPNS 来源合并
+- [ ] 更强的 pointer candidates 选举策略
 - [ ] 更稳定的浏览器端内容传播策略
 - [ ] 更完整的社区策略元数据结构
 
@@ -370,8 +331,9 @@ python3 -m http.server 8080
 如果你在修改社区索引逻辑，建议先验证：
 
 - 发布策略后本地索引是否追加
-- 发布索引后是否生成新的指针 CID
-- 通过其他指针 CID 是否能成功合并索引
+- 发布索引后是否生成新的 pointer CID
+- `community-pointer.json` / IPNS 公告板字段是否与代码一致
+- 通过其他 pointer CID 是否能成功合并索引
 - 社区列表和侧边计数是否同步刷新
 
 ---

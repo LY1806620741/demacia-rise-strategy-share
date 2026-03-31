@@ -13,7 +13,6 @@ export const state = {
     lastMessage: '未同步社区索引',
     discoverySource: 'local',
     knownPointerCount: 0,
-    redisRegistered: false,
     autoWriteReason: '未检查',
   },
   ipfs: {
