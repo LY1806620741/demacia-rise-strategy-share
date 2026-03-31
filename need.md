@@ -262,7 +262,7 @@ mindmap
       补充应对阵容与研究
       填写策略描述
       发布社区策略
-      发布或同步指针CID
+      发布或同步社区索引
     搜索与推荐
       官方优先
       社区补充
@@ -271,14 +271,15 @@ mindmap
     社区同步
       IPFS存储策略
       本地索引
-      指针CID分享
+      IPNS公告板
+      本地候选入口
       导入导出索引
     当前边界
       无自动全网发现
       无自动公网组网
-      需分享指针CID
+      根IPNS公告板仍需外部维护
     未来目标
-      多指针合并
+      多IPNS来源合并
       更强检索
       更稳传播
       社区治理
@@ -301,7 +302,7 @@ mindmap
 `index.html -> app.js -> frontend/min-entry.js`
 
 当前社区方案：
-`Helia / IPFS + 本地社区索引 + 指针 CID 同步`
+`Helia / IPFS + 本地社区索引 + IPNS pointer candidates manifest + 本地候选入口`
 
 当前结构化内容优先看：`config.json`
 当前游戏推荐依据优先看：`doc/gameinfo.md`
