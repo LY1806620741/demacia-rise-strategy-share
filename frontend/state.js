@@ -39,6 +39,7 @@ export const state = {
     communitySearchEnabled: true,
     defaultMaxResults: 8,
     discoveryMode: 'decentralized-first',
+    currentChapter: 0,
   },
 };
 

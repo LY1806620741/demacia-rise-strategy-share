@@ -199,12 +199,33 @@
   },
   "town_defense_recommendations": [
     {
+      "town_id": "terbisia",
+      "town_name": "托比西亚",
+      "region": "border",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。第二章早期关卡，成功率受开局与站位影响较大。",
+      "waves": [
+        {
+          "chapter": 2,
+          "wave_id": "terbisia_ch2_defense",
+          "label": "第二章 · 托比西亚",
+          "incoming_enemy_ids": ["drakehound", "krug"],
+          "incoming_enemy_text": "龙犬*3，石甲虫*5",
+          "recommended_lineup_text": "波比、卫兵、卫兵、弓兵",
+          "required_tech_text": "首都等级2-战场纪律、首都等级1-战场扩增、首都等级1-波比、首都等级1-扩增兵力",
+          "optional_tech_text": "可通过多次重开优化结局",
+          "tactic": "弓兵活到最后，波比尽量锤出控制",
+          "notes": "小概率勉强惨胜，仅剩弓兵也可过关"
+        }
+      ]
+    },
+    {
       "town_id": "eaglestone",
       "town_name": "鹰石镇",
       "region": "mountain",
       "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
+          "chapter": 5,
           "wave_id": "eaglestone_heavy_assault",
           "label": "第五章 · 鹰石镇",
           "incoming_enemy_ids": ["yeti", "tribal_warrior", "troll"],
@@ -224,6 +245,7 @@
       "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
+          "chapter": 5,
           "wave_id": "dawn_fort_noxus_siege",
           "label": "第五章 · 黎明要塞",
           "incoming_enemy_text": "龙蜥*4，诺克萨斯步兵*43",
@@ -241,6 +263,7 @@
       "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
+          "chapter": 5,
           "wave_id": "fossbarrow_stonebeast_surge",
           "label": "第五章 · 福斯拜罗",
           "incoming_enemy_text": "精锐石甲虫*2，龙犬*40，石甲虫*8",
@@ -258,6 +281,7 @@
       "notes": "以 doc/gameinfo.md 阵容推荐为准。关键不开二倍速，失败了可退出重进。",
       "waves": [
         {
+          "chapter": 5,
           "wave_id": "chapter5_final_noxus_assault",
           "label": "第五章 · 诺克萨斯敌袭",
           "incoming_enemy_text": "龙蜥*2，诺克萨斯龙犬*12，诺克萨斯步兵*15",
@@ -266,6 +290,198 @@
           "optional_tech_text": "可选战斗领导术",
           "tactic": "游侠处理掉龙蜥，弓箭手活到最后",
           "notes": "卫兵可换莫甘娜"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_01",
+      "town_name": "第六章敌袭 1",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_01",
+          "label": "第六章 · 敌袭 1",
+          "incoming_enemy_text": "诺克萨斯步兵*9，诺克萨斯战斗法师*7，龙蜥*1",
+          "recommended_lineup_text": "娑娜、游侠、卫兵、士兵、卫兵、弓兵、士兵"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_02",
+      "town_name": "第六章敌袭 2",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_02",
+          "label": "第六章 · 敌袭 2",
+          "incoming_enemy_text": "诺克萨斯龙犬*10，诺克萨斯步兵*4，诺克萨斯战斗法师*5",
+          "recommended_lineup_text": "莫甘娜、士兵、士兵、弓兵、弓兵、卫兵、弓兵",
+          "tactic": "士兵阻挡龙犬，卫兵吸引仇恨，莫甘娜和弓兵快速清理前排"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_03",
+      "town_name": "第六章敌袭 3",
+      "region": "wild",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_03",
+          "label": "第六章 · 敌袭 3",
+          "incoming_enemy_text": "龙犬*4，雪人*2",
+          "recommended_lineup_text": "加里奥、士兵、弓兵、卫兵、弓兵、弓兵、莫甘娜",
+          "tactic": "士兵阻挡龙犬，卫兵分散站位浪费雪人范围攻击，莫甘娜和弓兵快速输出"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_04",
+      "town_name": "第六章敌袭 4",
+      "region": "wild",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_04",
+          "label": "第六章 · 敌袭 4",
+          "incoming_enemy_text": "龙犬*13，云霄亚龙*1，石甲虫*4，雪人*1",
+          "recommended_lineup_text": "莫甘娜、弓兵、弓兵、卫兵、士兵、加里奥、游侠"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_05",
+      "town_name": "第六章敌袭 5",
+      "region": "wild",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_05",
+          "label": "第六章 · 敌袭 5",
+          "incoming_enemy_text": "巨魔*2，石甲虫*12，龙犬*4",
+          "recommended_lineup_text": "娑娜、士兵、加里奥、士兵、卫兵、弓兵、莫甘娜"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_06",
+      "town_name": "第六章敌袭 6",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_06",
+          "label": "第六章 · 敌袭 6",
+          "incoming_enemy_text": "诺克萨斯战斗法师*8，诺克萨斯龙犬*6，诺克萨斯步兵*5",
+          "recommended_lineup_text": "弓兵、游侠、加里奥、卫兵、卫兵、卫兵、士兵",
+          "tactic": "有一个英雄提升攻击，卫兵清理龙犬"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_07",
+      "town_name": "第六章敌袭 7",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_07",
+          "label": "第六章 · 敌袭 7",
+          "incoming_enemy_text": "龙犬*4，诺克萨斯重击兵*1",
+          "recommended_lineup_text": "卫兵、士兵、波比、游侠、游侠、游侠、弓兵",
+          "tactic": "至少需要两个游侠稳定输出"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_08",
+      "town_name": "第六章强敌来袭 8",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_08",
+          "label": "第六章 · 强敌来袭 8",
+          "incoming_enemy_text": "诺克萨斯重击兵*1，诺克萨斯步兵*20，龙蜥*1",
+          "recommended_lineup_text": "游侠、游侠、盖伦、莫甘娜、士兵、卫兵、加里奥",
+          "tactic": "莫甘娜清理步兵，加里奥、士兵、卫兵顶住，游侠点杀重甲目标"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_09",
+      "town_name": "第六章敌袭 9",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_09",
+          "label": "第六章 · 敌袭 9",
+          "incoming_enemy_text": "诺克萨斯步兵*26，诺克萨斯龙犬*9",
+          "recommended_lineup_text": "莫甘娜、士兵、卫兵、卫兵、弓兵、弓兵、加里奥"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_10",
+      "town_name": "第六章敌袭 10",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_10",
+          "label": "第六章 · 敌袭 10",
+          "incoming_enemy_text": "诺克萨斯步兵*7，诺克萨斯战斗法师*6，龙蜥*1",
+          "recommended_lineup_text": "士兵、士兵、游侠、弓兵、游侠、卫兵、盖伦"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter6_enemy_raid_11",
+      "town_name": "第六章敌袭 11",
+      "region": "border",
+      "notes": "第六章通用需求：首都4级前所有战斗研究、战场扩增、精锐盖伦、强化箭羽、劲弩突破、无畏先锋、战斗领导术、娑娜。",
+      "waves": [
+        {
+          "chapter": 6,
+          "wave_id": "chapter6_enemy_raid_11",
+          "label": "第六章 · 敌袭 11",
+          "incoming_enemy_text": "龙犬*7，诺克萨斯战斗法师*5，诺克萨斯步兵*5",
+          "recommended_lineup_text": "莫甘娜、卫兵、卫兵、士兵、士兵、弓兵、弓兵"
+        }
+      ]
+    },
+    {
+      "town_id": "chapter7_extreme_assault",
+      "town_name": "第七章强敌来袭-极限",
+      "region": "border",
+      "notes": "以 doc/gameinfo.md 阵容推荐为准。极限战斗，强依赖前排承伤与后排清理。",
+      "waves": [
+        {
+          "chapter": 7,
+          "wave_id": "chapter7_extreme_assault_01",
+          "label": "第七章 · 强敌来袭 - 极限",
+          "incoming_enemy_text": "诺克萨斯龙犬*17，诺克萨斯重击兵*1，诺克萨斯战斗法师*2",
+          "recommended_lineup_text": "加里奥、盖伦、士兵、卫兵、游侠、游侠、莫甘娜"
+        },
+        {
+          "chapter": 7,
+          "wave_id": "chapter7_extreme_assault_02",
+          "label": "第七章 · 强敌来袭 2",
+          "incoming_enemy_text": "部落战士*12，龙犬*26，云霄亚龙*1，巨魔*2",
+          "recommended_lineup_text": "士兵、莫甘娜、游侠、卫兵、弓兵、盖伦、加里奥"
         }
       ]
     }

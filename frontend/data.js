@@ -8,6 +8,12 @@ function withDescription(entity) {
   };
 }
 
+function parseChapterNumber(value) {
+  const text = String(value || '');
+  const matched = /第\s*(\d+)\s*章/.exec(text);
+  return matched ? Number(matched[1]) : 0;
+}
+
 export function getFactionUnits(faction) {
   return Array.isArray(state.config?.units?.[faction]) ? state.config.units[faction].map(withDescription) : [];
 }
@@ -81,6 +87,7 @@ export function getResolvedTownDefenseRecommendations() {
       town,
       waves: Array.isArray(entry.waves) ? entry.waves.map(wave => ({
         ...wave,
+        chapter: Number(wave.chapter || parseChapterNumber(wave.label || entry.notes || '')) || 0,
         incomingEnemies: (wave.incoming_enemy_ids || []).map(getEnemyUnitById).filter(Boolean),
         recommendedLineup: (wave.recommended_lineup_ids || []).map(getDefenseUnitById).filter(Boolean),
         recommendedTechs: (wave.recommended_tech_ids || []).map(getTechById).filter(Boolean),
@@ -89,3 +96,20 @@ export function getResolvedTownDefenseRecommendations() {
   });
 }
 
+export function getCurrentChapter() {
+  const configuredChapter = Number(state?.config?.community?.current_chapter || 0) || 0;
+  const runtimeChapter = Number(state?.networkConfig?.currentChapter || 0) || 0;
+  return configuredChapter || runtimeChapter || 0;
+}
+
+export function getResolvedTownDefenseRecommendationsForChapter(chapter = getCurrentChapter()) {
+  const targetChapter = Number(chapter || 0);
+  const recommendations = getResolvedTownDefenseRecommendations();
+  if (!targetChapter) return recommendations;
+  return recommendations
+    .map(entry => ({
+      ...entry,
+      waves: (entry.waves || []).filter(wave => Number(wave.chapter || 0) === targetChapter),
+    }))
+    .filter(entry => entry.waves.length > 0);
+}
