@@ -7,6 +7,7 @@ export function normalizeNetworkConfig(raw = {}) {
   return {
     communitySearchEnabled: raw.community_search_enabled !== false,
     defaultMaxResults: Math.max(1, Number(raw.default_max_results || 8)),
+    currentChapter: Math.max(0, Number(raw.current_chapter || 0)),
   };
 }
 
@@ -14,6 +15,30 @@ export async function loadConfig() {
   const res = await fetch('./config.json');
   state.config = await res.json();
   state.networkConfig = normalizeNetworkConfig(state.config?.community || state.config?.network || {});
+}
+
+export function renderChapterSelector() {
+  const select = byId('chapter-select');
+  if (!select) return;
+  const current = Number(state.networkConfig.currentChapter || 0);
+  select.innerHTML = `
+    <option value="0">全部章节</option>
+    <option value="2">第二章</option>
+    <option value="5">第五章</option>
+    <option value="6">第六章</option>
+    <option value="7">第七章</option>
+  `;
+  select.value = String(current);
+}
+
+export function setupChapterSelector(onChange) {
+  const select = byId('chapter-select');
+  if (!select) return;
+  renderChapterSelector();
+  select.addEventListener('change', () => {
+    state.networkConfig.currentChapter = Math.max(0, Number(select.value || 0));
+    onChange?.(state.networkConfig.currentChapter);
+  });
 }
 
 export function renderBattleTechOptions() {

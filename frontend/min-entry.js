@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection } from './config-ui.js';
+import { loadConfig, renderBattleTechOptions, setupBattleTechPicker, renderEnemyUnitList, setupEnemyUnitPicker, setupCounterUnitSelection, setupChapterSelector } from './config-ui.js';
 import { renderEnemyEditor } from './enemy-lineup.js';
 import { renderEditorTips, renderCounterSelection, updateDashboard, renderOfficialLineups, renderHeroList, renderIpfsStatus } from './view-renderers.js';
 import { renderCommunityLineups, submitBattleStrategy as submitCommunityStrategy, get_strategies } from './community-strategy.js';
@@ -64,6 +64,10 @@ async function pinCommunityStrategy(cid) {
   await loadConfig();
   indexController.ensureLocalIndexInitialized();
   indexController.hydratePointerInput();
+  safeRender('setupChapterSelector', () => setupChapterSelector(() => {
+    safeRender('renderOfficialLineups', () => renderOfficialLineups());
+    searchController.searchByEnemyLineup();
+  }));
   safeRender('setupBattleTechPicker', () => setupBattleTechPicker());
   safeRender('setupEnemyUnitPicker', () => setupEnemyUnitPicker());
   safeRender('setupCounterUnitSelection', () => setupCounterUnitSelection(searchController.addCounterUnit));

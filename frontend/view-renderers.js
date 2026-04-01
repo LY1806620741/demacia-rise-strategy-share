@@ -1,5 +1,5 @@
 import { byId, wasmArray, escapeHtml, highlight } from './utils.js';
-import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations } from './data.js';
+import { getHeroes, getOfficialLineups, getResolvedTownDefenseRecommendations, getCurrentChapter } from './data.js';
 import { renderUnitHint } from './unit-tooltips.js';
 import { getIpfsStatus } from './ipfs-client.js';
 import { normalizeCommunityStrategyRecord } from './strategy-schema.js';
@@ -35,9 +35,22 @@ export function updateDashboard({ state, getStrategies }) {
 
 export function renderOfficialLineups() {
   const container = byId('official-recommendations-container');
+  const summary = byId('official-lineups-chapter-summary');
   if (!container) return;
-  const townRecommendations = getResolvedTownDefenseRecommendations();
+  const currentChapter = Number(getCurrentChapter() || 0);
+  const townRecommendations = getResolvedTownDefenseRecommendations()
+    .map(entry => ({
+      ...entry,
+      waves: currentChapter > 0 ? (entry.waves || []).filter(wave => Number(wave.chapter || 0) === currentChapter) : (entry.waves || []),
+    }))
+    .filter(entry => entry.waves.length > 0);
   const fallbackCompositions = getOfficialLineups();
+
+  if (summary) {
+    summary.textContent = currentChapter > 0
+      ? `当前显示第 ${currentChapter} 章官方阵容`
+      : '当前显示全部章节官方阵容';
+  }
 
   if (townRecommendations.length) {
     container.innerHTML = townRecommendations.map(entry => `
@@ -50,6 +63,18 @@ export function renderOfficialLineups() {
           <span class="muted">${entry.waves.length} 个来袭波次</span>
         </div>
         <div class="muted">${escapeHtml(entry.notes || '暂无额外说明')}</div>
+        <div style="display:grid;gap:.6rem;">
+          ${entry.waves.map(wave => `
+            <div style="border:1px solid #2f2f2f;border-radius:8px;padding:.75rem;background:#111;">
+              <div style="font-weight:bold;color:#9fd3ff;">${escapeHtml(wave.label || '来袭波次')}</div>
+              <div style="margin-top:.35rem;"><strong>敌方阵容：</strong>${escapeHtml(wave.incoming_enemy_text || '')}</div>
+              <div style="margin-top:.35rem;"><strong>推荐阵容：</strong>${escapeHtml(wave.recommended_lineup_text || '未配置')}</div>
+              <div style="margin-top:.35rem;"><strong>研究：</strong>${escapeHtml(wave.required_tech_text || '未配置')}</div>
+              ${wave.optional_tech_text ? `<div style="margin-top:.35rem;"><strong>可选：</strong>${escapeHtml(wave.optional_tech_text)}</div>` : ''}
+              ${wave.tactic ? `<div class="muted" style="margin-top:.35rem;"><strong>诀窍：</strong>${escapeHtml(wave.tactic)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
       </div>
     `).join('');
     return;
