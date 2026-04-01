@@ -187,15 +187,27 @@ export async function fetchIpnsJson(ipnsName) {
   if (!normalized) {
     return { ok: false, error: 'missing ipns name', path: '' };
   }
-  const path = `${DEFAULT_IPNS_PATH_PREFIX}/${normalized}`;
-  try {
-    const response = await fetch(path, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`ipns http ${response.status}`);
-    const data = await response.json();
-    return { ok: true, path, data };
-  } catch (error) {
-    return { ok: false, path, error: error?.message || 'failed to fetch ipns json' };
+
+  const candidatePaths = normalized.includes('/')
+    ? [normalized]
+    : [
+        `./${normalized}`,
+        `${DEFAULT_IPNS_PATH_PREFIX}/${normalized}`,
+      ];
+
+  let lastError = 'failed to fetch ipns json';
+  for (const path of candidatePaths) {
+    try {
+      const response = await fetch(path, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`ipns http ${response.status}`);
+      const data = await response.json();
+      return { ok: true, path, data };
+    } catch (error) {
+      lastError = error?.message || 'failed to fetch ipns json';
+    }
   }
+
+  return { ok: false, path: candidatePaths[0] || '', error: lastError, triedPaths: candidatePaths };
 }
 
 export async function uploadJsonDocument(document) {

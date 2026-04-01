@@ -40,6 +40,7 @@ export function createIndexSyncController({ renderCommunity }) {
     const canProvide = state.ipfs.canProvide === true || getPublishedCids().length > 0;
     const heartbeatDue = shouldRefreshReplicaBoard(now);
 
+    if (state.networkConfig.communitySearchEnabled === false) return { ok: false, reason: '用户已关闭社区连接' };
     if (!hasReplicas) return { ok: false, reason: '没有可提供的社区内容' };
     if (discovery.hasNetworkEntry) return { ok: false, reason: '已发现 IPNS 社区入口，无需创建本地候选入口' };
     if (!ipfsReady) return { ok: false, reason: 'IPFS 未就绪' };
@@ -53,15 +54,17 @@ export function createIndexSyncController({ renderCommunity }) {
     state.communitySync.autoWriteReason = decision.reason;
     if (!decision.ok) return;
     try {
+      logDebug('community-sync', '开始自动刷新在线副本声明', { lastPointerCid: getLastPointerCid(), itemCount: communityIndex.items.length });
       const result = await publishIndexPointer(communityIndex);
       communityIndex = result.index;
       state.communitySync.lastPublishedPointerCid = result.cid;
       state.communitySync.lastMessage = '已自动刷新在线副本声明';
       state.communitySync.autoWriteReason = '自动刷新在线副本声明成功';
+      logDebug('community-sync', '自动刷新在线副本声明成功', result);
       await refreshStrategiesFromIndex(state.communitySync.lastMessage);
     } catch (error) {
       state.communitySync.autoWriteReason = `自动刷新失败：${error?.message || '未知错误'}`;
-      console.warn('failed to refresh online replica heartbeat', error);
+      logWarn('community-sync', '自动刷新在线副本声明失败', { error: error?.message || String(error) });
     }
   }
 
@@ -165,6 +168,7 @@ export function createIndexSyncController({ renderCommunity }) {
 
   async function refreshCommunityFromKnownPointers() {
     const discovery = await discoverCommunityPointers();
+    logDebug('community-sync', '开始根据已知候选入口刷新社区', discovery);
     const result = await refreshFromKnownPointers();
     communityIndex = result.index;
     await syncCommunityPinSummary(communityIndex, result.knownPointers || []);
@@ -181,6 +185,7 @@ export function createIndexSyncController({ renderCommunity }) {
       : `${baseMessage}，暂无新增`;
     state.communitySync.discoverySource = discovery.source;
     state.communitySync.knownPointerCount = discovery.knownPointers.length;
+    logDebug('community-sync', '已知候选入口刷新完成', { added: result.added, knownPointers: result.knownPointers, lastMessage: state.communitySync.lastMessage });
     await refreshStrategiesFromIndex(state.communitySync.lastMessage);
   }
 

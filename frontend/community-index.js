@@ -11,6 +11,7 @@ import {
   getPinnedCids,
   fetchIpnsJson,
 } from './ipfs-client.js';
+import { logDebug, logWarn } from './debug.js';
 import { state, DISCOVERY_RECORD_TTL_MS } from './state.js';
 
 const INDEX_STORAGE_KEY = 'community_index_manifest_v2';
@@ -38,12 +39,28 @@ function isFreshPointerCandidatesManifest(manifest) {
   return !!manifest?.currentPointerCid && Number(manifest?.updatedAt || 0) > (Date.now() - DISCOVERY_RECORD_TTL_MS);
 }
 
+function isCommunityConnectionEnabled() {
+  const configured = state?.config?.community?.community_search_enabled;
+  if (configured === false) return false;
+  return state?.networkConfig?.communitySearchEnabled !== false;
+}
+
 async function fetchIpnsPointerCandidatesManifest() {
+  if (!isCommunityConnectionEnabled()) {
+    logDebug('community-discovery', '社区连接已关闭，跳过 IPNS 公告板读取');
+    return normalizePointerCandidatesManifest({}, { source: 'disabled', error: 'community connection disabled' });
+  }
   const configured = state?.config?.community || {};
   const ipnsName = String(configured.default_ipns_name || DEFAULT_IPNS_NAME).trim();
+  logDebug('community-discovery', '读取 IPNS 公告板', { ipnsName });
   const result = await fetchIpnsJson(ipnsName);
-  if (!result.ok) return normalizePointerCandidatesManifest({}, { source: 'ipns', error: result.error || 'ipns unavailable' });
-  return normalizePointerCandidatesManifest(result.data, { source: 'ipns' });
+  if (!result.ok) {
+    logWarn('community-discovery', 'IPNS 公告板读取失败', result);
+    return normalizePointerCandidatesManifest({}, { source: 'ipns', error: result.error || 'ipns unavailable' });
+  }
+  const normalized = normalizePointerCandidatesManifest(result.data, { source: 'ipns' });
+  logDebug('community-discovery', 'IPNS 公告板读取成功', normalized);
+  return normalized;
 }
 
 function loadKnownPointers() {
@@ -125,6 +142,23 @@ export async function setLastPointerCid(cid) {
 }
 
 export async function discoverCommunityPointers() {
+  if (!isCommunityConnectionEnabled()) {
+    const localPointers = [...new Set([
+      getLastPointerCid(),
+      ...getPublishedCids(),
+      ...getConfiguredDefaultPointers(),
+      ...loadKnownPointers(),
+    ].filter(Boolean))];
+    const disabledResult = {
+      source: 'disabled',
+      pointerCid: '',
+      knownPointers: localPointers,
+      ipnsManifest: normalizePointerCandidatesManifest({}, { source: 'disabled', error: 'community connection disabled' }),
+      hasNetworkEntry: localPointers.length > 0,
+    };
+    logDebug('community-discovery', '社区连接关闭后的本地候选入口结果', disabledResult);
+    return disabledResult;
+  }
   const ipnsManifest = await fetchIpnsPointerCandidatesManifest();
   const pointers = [...new Set([
     isFreshPointerCandidatesManifest(ipnsManifest) ? ipnsManifest.currentPointerCid : '',
@@ -137,32 +171,38 @@ export async function discoverCommunityPointers() {
   const source = isFreshPointerCandidatesManifest(ipnsManifest)
     ? 'ipns'
     : (pointers.length ? (localStorage.getItem(DISCOVERY_SOURCE_KEY) || 'local') : 'empty');
-  return {
+  const result = {
     source,
     pointerCid: isFreshPointerCandidatesManifest(ipnsManifest) ? ipnsManifest.currentPointerCid : '',
     knownPointers: pointers,
     ipnsManifest,
     hasNetworkEntry: pointers.length > 0,
   };
+  logDebug('community-discovery', '候选入口合并结果', result);
+  return result;
 }
 
 export async function ensureDiscoveryRegistration(pointerCid = '') {
   const discovery = await discoverCommunityPointers();
   const effectivePointerCid = String(pointerCid || getLastPointerCid() || getPublishedCids()[0] || '').trim();
-  console.info('[community-discovery] ensureDiscoveryRegistration(IPNS)', {
+  logDebug('community-discovery', '尝试建立本地候选入口', {
     hasNetworkEntry: discovery.hasNetworkEntry,
     pointerCid: effectivePointerCid,
     source: discovery.source,
     knownPointerCount: discovery.knownPointers.length,
   });
   if (discovery.hasNetworkEntry || !effectivePointerCid) {
-    return { ok: false, skipped: true, reason: discovery.hasNetworkEntry ? 'network-entry-exists' : 'missing-pointer', discovery };
+    const skipped = { ok: false, skipped: true, reason: discovery.hasNetworkEntry ? 'network-entry-exists' : 'missing-pointer', discovery };
+    logDebug('community-discovery', '跳过建立本地候选入口', skipped);
+    return skipped;
   }
   saveKnownPointers([effectivePointerCid, ...loadKnownPointers()]);
   localStorage.setItem(DISCOVERY_SOURCE_KEY, 'ipns-local-seed');
   state.communitySync.discoverySource = 'ipns';
   state.communitySync.lastMessage = '未发现 IPNS 社区入口，已使用本地 pointer 作为候选入口';
-  return { ok: true, localOnly: true, pointerCid: effectivePointerCid, discovery: await discoverCommunityPointers() };
+  const result = { ok: true, localOnly: true, pointerCid: effectivePointerCid, discovery: await discoverCommunityPointers() };
+  logDebug('community-discovery', '本地候选入口建立完成', result);
+  return result;
 }
 
 export async function getKnownPointerCids() {
