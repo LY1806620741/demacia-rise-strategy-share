@@ -6,6 +6,14 @@ import { renderSearchResults, renderCounterSelection, updateDashboard } from './
 import { get_strategies, recommend_strategies_for_enemy, vote, searchCommunity } from './community-strategy.js';
 
 export function createSearchController({ renderEnemyEditor, renderCommunity }) {
+  async function searchByEnemyLineup() {
+    try {
+      await renderEnemyRecommendations({ recommendStrategies: recommend_strategies_for_enemy, getStrategies: get_strategies });
+    } catch (error) {
+      console.error('[search-controller] enemy lineup search failed', error);
+    }
+  }
+
   function renderSearch() {
     renderSearchResults({
       searchFn: (keyword) => searchCommunity(keyword, get_strategies()),
@@ -15,20 +23,16 @@ export function createSearchController({ renderEnemyEditor, renderCommunity }) {
     });
   }
 
-  function searchByEnemyLineup() {
-    renderEnemyRecommendations({ recommendStrategies: recommend_strategies_for_enemy, getStrategies: get_strategies });
-  }
-
   function addEnemyUnit(id) {
-    addEnemyUnitToQueue(id, () => searchByEnemyLineup());
+    addEnemyUnitToQueue(id, () => { void searchByEnemyLineup(); });
   }
 
   function changeEnemyUnitCount(id, delta) {
-    changeEnemyUnitCountInQueue(id, delta, () => searchByEnemyLineup());
+    changeEnemyUnitCountInQueue(id, delta, () => { void searchByEnemyLineup(); });
   }
 
   function removeEnemyUnit(id) {
-    removeEnemyUnitFromQueue(id, () => searchByEnemyLineup());
+    removeEnemyUnitFromQueue(id, () => { void searchByEnemyLineup(); });
   }
 
   function addCounterUnit(payload) {
@@ -50,21 +54,21 @@ export function createSearchController({ renderEnemyEditor, renderCommunity }) {
     vote(id, isLike);
     renderCommunity();
     renderSearch();
-    searchByEnemyLineup();
+    void searchByEnemyLineup();
     updateDashboard({ state, getStrategies: get_strategies });
   }
 
   function setupSearchBindings() {
     byId('enemy-lineup-text-input')?.addEventListener('input', debounce(() => {
       handleEnemyTextInput(renderEnemyEditor);
-      searchByEnemyLineup();
+      void searchByEnemyLineup();
     }, 150));
     byId('battle-strategy-desc')?.addEventListener('input', event => {
       state.strategyNotes = event.target?.value || '';
     });
-    byId('include-community-search')?.addEventListener('change', searchByEnemyLineup);
+    byId('include-community-search')?.addEventListener('change', () => { void searchByEnemyLineup(); });
     byId('similarity-result-limit')?.addEventListener('change', () => {
-      searchByEnemyLineup();
+      void searchByEnemyLineup();
       renderSearch();
     });
     byId('q')?.addEventListener('input', debounce(renderSearch, 150));

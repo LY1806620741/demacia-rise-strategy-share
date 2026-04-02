@@ -1,88 +1,23 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { mapOfficialMatches as mapOfficialMatchesCore } from '../frontend/lineup-search-core.js';
 
 const configPath = path.resolve('./config.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-function normalizeLineupToken(token) {
-  const normalized = String(token || '').trim().replace(/^[\[\]()（）]+|[\[\]()（）]+$/gu, '');
-  if (!normalized) return '';
-  const lowered = normalized.toLowerCase();
-  return lowered
-    .replace(/\s*([x×*])\s*\d+$/i, '')
-    .replace(/\s+\d+$/i, '')
-    .replace(/^[+＋*×:：]+|[+＋*×:：]+$/gu, '')
-    .trim();
-}
-
-function parseLineupCount(token) {
-  const normalized = String(token || '').trim().toLowerCase();
-  const explicit = /(?:^|\s|[+＋,，;；|/])[x×*]\s*(\d+)$/i.exec(normalized)
-    || /[x×*]\s*(\d+)$/i.exec(normalized)
-    || /\s+(\d+)$/i.exec(normalized);
-  return Math.max(1, Number(explicit?.[1] || 1));
-}
-
-function normalizedLineupCounts(lineup) {
-  const counts = new Map();
-  const chunks = String(lineup || '')
-    .split(/[，,；;\n\t|/]/)
-    .flatMap(segment => segment.split(/[+＋]/))
-    .map(chunk => chunk.trim())
-    .filter(Boolean);
-  for (const chunk of chunks) {
-    const key = normalizeLineupToken(chunk);
-    if (!key) continue;
-    const count = parseLineupCount(chunk);
-    counts.set(key, (counts.get(key) || 0) + count);
-  }
-  return counts;
-}
-
-function calculateLineupSimilarity(lineupA, lineupB) {
-  const countsA = normalizedLineupCounts(lineupA);
-  const countsB = normalizedLineupCounts(lineupB);
-  if (!countsA.size && !countsB.size) return 1;
-  if (!countsA.size || !countsB.size) return 0;
-
-  const allKeys = new Set([...countsA.keys(), ...countsB.keys()]);
-  let overlap = 0;
-  let total = 0;
-
-  for (const key of allKeys) {
-    const a = countsA.get(key) || 0;
-    const b = countsB.get(key) || 0;
-    overlap += Math.min(a, b);
-    total += Math.max(a, b);
-  }
-
-  return total ? overlap / total : 0;
-}
-
-function parseChapter(label = '') {
-  const matched = /第\s*(\d+)\s*章/.exec(String(label));
-  return matched ? Number(matched[1]) : 0;
-}
-
-function mapOfficialMatches(entries, query, chapter = 0) {
-  const currentChapter = Number(chapter || 0) || 0;
-  return entries.flatMap(entry =>
-    (entry.waves || []).map(wave => ({
-      town: entry.town_name,
-      wave: wave.label,
-      chapter: Number(wave.chapter || parseChapter(wave.label || '')),
-      similarity: calculateLineupSimilarity(wave.incoming_enemy_text || '', query),
-      chapterMatched: currentChapter > 0 && Number(wave.chapter || parseChapter(wave.label || '')) === currentChapter,
-    }))
-  ).filter(item => item.similarity > 0).sort((a, b) => {
-    if (Number(b.chapterMatched) !== Number(a.chapterMatched)) return Number(b.chapterMatched) - Number(a.chapterMatched);
-    return b.similarity - a.similarity;
-  });
+function mapMatches(entries, query, chapter = 0) {
+  return mapOfficialMatchesCore(entries, query, chapter).map(item => ({
+    town: item.townName,
+    wave: item.wave.label,
+    chapter: item.chapter,
+    similarity: item.similarity,
+    chapterMatched: item.chapterMatched,
+  }));
 }
 
 function findOfficialRecommendationsByEnemyLineup(query, chapter = 0) {
-  return mapOfficialMatches(config.town_defense_recommendations || [], query, chapter);
+  return mapMatches(config.town_defense_recommendations || [], query, chapter);
 }
 
 const exactHits = findOfficialRecommendationsByEnemyLineup('雪人 x2, 部落战士 x15, 巨魔 x3', 5);
