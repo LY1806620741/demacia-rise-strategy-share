@@ -76,6 +76,11 @@ async function findIndexedCommunityRecommendations(query, limit) {
     .slice(0, limit);
 }
 
+function normalizeErrorMessage(error, fallback = '社区搜索暂不可用') {
+  const message = String(error?.message || error || '').trim();
+  return message || fallback;
+}
+
 export async function searchByEnemyLineup({ recommendStrategies, getStrategies }) {
   const input = byId('enemy-lineup-text-input');
   const query = input?.value?.trim() || state.enemyLineupDraft.trim() || formatLineup(state.enemyQueue);
@@ -90,8 +95,23 @@ export async function searchByEnemyLineup({ recommendStrategies, getStrategies }
 
   const officialLimit = Math.max(3, Math.ceil(limit / 2));
   const officialMatches = findOfficialRecommendationsByEnemyLineup(query, officialLimit);
-  const localCommunityMatches = includeCommunity ? wasmArray(recommendStrategies(query, limit)) : [];
-  const indexedCommunityMatches = includeCommunity ? await findIndexedCommunityRecommendations(query, limit) : [];
+  let localCommunityMatches = [];
+  let indexedCommunityMatches = [];
+  let communityError = '';
+  if (includeCommunity) {
+    try {
+      localCommunityMatches = wasmArray(recommendStrategies(query, limit));
+    } catch (error) {
+      communityError = normalizeErrorMessage(error);
+      console.warn('[community-search] local strategy recommend failed', error);
+    }
+    try {
+      indexedCommunityMatches = await findIndexedCommunityRecommendations(query, limit);
+    } catch (error) {
+      if (!communityError) communityError = normalizeErrorMessage(error);
+      console.warn('[community-search] indexed strategy search failed', error);
+    }
+  }
   const communityMap = new Map();
   for (const item of [...indexedCommunityMatches, ...localCommunityMatches]) {
     const key = item.strategy_id || item.id || item.cid;
@@ -125,7 +145,7 @@ export async function searchByEnemyLineup({ recommendStrategies, getStrategies }
     const strategy = strategies.find(s => s.id === item.strategy_id) || item;
     const displayTitle = strategy?.description || strategy?.title || item.strategy_id;
     return `<div style="background:#171717;border:1px solid #333;border-radius:10px;padding:1rem;margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;"><strong>${escapeHtml(displayTitle)}</strong><span class="muted">相似度 ${(Number(item.similarity_score || 0) * 100).toFixed(0)}%</span></div><div style="margin:.45rem 0;"><strong>建议阵容：</strong>${escapeHtml(item.counter_lineup || strategy?.counter_lineup || '未填写')}</div><div style="margin:.45rem 0;"><strong>敌人阵容：</strong>${escapeHtml(strategy?.target || item.target || query)}</div><div style="margin:.45rem 0;"><strong>研究：</strong>${escapeHtml(strategy?.counter_tech || item.counter_tech || '未填写')}</div><div class="muted">${escapeHtml(strategy?.description || item.description || '')}</div><div class="muted" style="margin-top:.35rem;word-break:break-all;">CID：${escapeHtml(strategy?.cid || item.cid || '')}</div></div>`;
-  }).join('') : '<div class="muted">未找到匹配的社区策略</div>';
+  }).join('') : `<div class="muted">${communityError ? `社区搜索失败：${escapeHtml(communityError)}` : '未找到匹配的社区策略'}</div>`;
   const communityHtml = includeCommunity ? `<div><div style="font-weight:bold;color:#9fd3ff;margin-bottom:.6rem;">社区相似策略</div>${communityItemsHtml}</div>` : '';
 
   container.innerHTML = `${officialHtml}${communityHtml}`;
